@@ -407,7 +407,7 @@ subroutine readGRURestart_fortran(indx_gru, handle_gru_data, err, message_r) &
   USE actor_data_types,only:gru_type
   USE C_interface_module,only:f_c_string_ptr  ! convert fortran string to c string
   USE INIT_HRU_ACTOR,only:readHRURestart
-
+  USE read_icond_module,only:check_icond                      ! module to check initial conditions
   USE var_lookup,only:iLookDECISIONS                          ! look-up values for model decisions
   USE var_lookup,only:iLookBVAR                               ! look-up values for basin-average model variables
   USE globalData,only:model_decisions                         ! model decision structure
