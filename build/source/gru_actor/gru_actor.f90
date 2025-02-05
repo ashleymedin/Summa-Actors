@@ -445,17 +445,17 @@ subroutine readGRURestart_fortran(indx_gru, handle_gru_data, err, message_r) &
   ! we have to do this since some initial conditions are not set in the restart file
   if(model_decisions(iLookDECISIONS%num_method)%iDecision .ne. closedForm) checkEnthalpy = .true. ! check enthalpy either for mixed form energy equation or enthalpy state variable
   if(model_decisions(iLookDECISIONS%num_method)%iDecision==enthalpyFormLU) use_lookup = .true.    ! use lookup tables for soil temperature-enthalpy instead of analytical solution
-  call check_icond(size(gru_data%hru),           & ! intent(in):    number of response units
-                   gru_data%progStruct,          & ! intent(inout): model prognostic variables
-                   gru_data%diagStruct,          & ! intent(inout): model diagnostic variables
-                   gru_data%mparStruct,          & ! intent(in):    model parameters
-                   gru_data%indxStruct,          & ! intent(in):    layer indexes
-                   gru_data%lookupStruct,        & ! intent(in):    lookup tables
-                   checkEnthalpy,                & ! intent(in):    flag if need to start with consistent enthalpy
-                   .false.,                      & ! intent(in):    flag that enthalpy not in initial conditions
-                   use_lookup,                   & ! intent(in):    flag to use the lookup table for soil enthalpy
-                   err,cmessage)                   ! intent(out):   error control
-  if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
+  call check_icond(size(gru_data%hru),        & ! intent(in):    number of response units
+                   gru_data%hru%progStruct,   & ! intent(inout): model prognostic variables
+                   gru_data%hru%diagStruct,   & ! intent(inout): model diagnostic variables
+                   gru_data%hru%mparStruct,   & ! intent(in):    model parameters
+                   gru_data%hru%indxStruct,   & ! intent(in):    layer indexes
+                   gru_data%hru%lookupStruct, & ! intent(in):    lookup tables
+                   checkEnthalpy,             & ! intent(in):    flag if need to start with consistent enthalpy
+                   .false.,                   & ! intent(in):    flag that enthalpy not in initial conditions
+                   use_lookup,                & ! intent(in):    flag to use the lookup table for soil enthalpy
+                   err,message)                 ! intent(out):   error control
+  if(err /= 0) then; call f_c_string_ptr(trim(message), message_r);return; end if
 #endif
 
   do iHRU = 1, size(gru_data%hru)
