@@ -413,6 +413,14 @@ subroutine readGRURestart_fortran(indx_gru, handle_gru_data, err, message_r) &
   USE globalData,only:model_decisions                         ! model decision structure
   USE mDecisions_module,only:localColumn, & ! separate groundwater representation in each local soil column
                              singleBasin    ! single groundwater store over the entire basin
+#ifdef V4_ACTIVE
+  USE mDecisions_module,only: fullStart,  & ! start with full aquifer
+                              emptyStart    ! start with empty aquifer
+  USE mDecisions_module,only: closedForm, & ! use temperature with closed form heat capacity
+                              enthalpyFormLU, & ! use enthalpy with soil temperature-enthalpy lookup tables
+                              enthalpyForm      ! use enthalpy with soil temperature-enthalpy analytical solution
+#endif
+
   implicit none
   ! Dummy Variables
   integer(c_int), intent(in)       :: indx_gru
@@ -423,20 +431,58 @@ subroutine readGRURestart_fortran(indx_gru, handle_gru_data, err, message_r) &
   integer(i4b)                     :: iHRU
   type(gru_type),pointer           :: gru_data
   character(len=256)               :: message = ""
+  real(dp)                         :: aquifer_start 
+  logical(lgt)                     :: checkEnthalpy      ! flag if checking enthalpy for consistency
+  logical(lgt)                     :: use_lookup         ! flag to use the lookup table for soil enthalpy, otherwise use analytical solution
 
   call f_c_string_ptr(trim(message), message_r)
   call c_f_pointer(handle_gru_data, gru_data)
+
+  ! check initial conditions
+  checkEnthalpy = .false.
+  use_lookup    = .false.
+#ifdef V4_ACTIVE
+  ! we have to do this since some initial conditions are not set in the restart file
+  if(model_decisions(iLookDECISIONS%num_method)%iDecision .ne. closedForm) checkEnthalpy = .true. ! check enthalpy either for mixed form energy equation or enthalpy state variable
+  if(model_decisions(iLookDECISIONS%num_method)%iDecision==enthalpyFormLU) use_lookup = .true.    ! use lookup tables for soil temperature-enthalpy instead of analytical solution
+  call check_icond(size(gru_data%hru),           & ! intent(in):    number of response units
+                   gru_data%progStruct,          & ! intent(inout): model prognostic variables
+                   gru_data%diagStruct,          & ! intent(inout): model diagnostic variables
+                   gru_data%mparStruct,          & ! intent(in):    model parameters
+                   gru_data%indxStruct,          & ! intent(in):    layer indexes
+                   gru_data%lookupStruct,        & ! intent(in):    lookup tables
+                   checkEnthalpy,                & ! intent(in):    flag if need to start with consistent enthalpy
+                   .false.,                      & ! intent(in):    flag that enthalpy not in initial conditions
+                   use_lookup,                   & ! intent(in):    flag to use the lookup table for soil enthalpy
+                   err,cmessage)                   ! intent(out):   error control
+  if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
+#endif
 
   do iHRU = 1, size(gru_data%hru)
     call readHRURestart(indx_gru, iHRU, gru_data%hru(iHRU), err, message)
     if(err /= 0) then; call f_c_string_ptr(trim(message), message_r);return; end if
   end do
 
+  aquifer_start  = 1._dp
+#ifdef V4_ACTIVE
+  ! select aquifer option
+  select case(model_decisions(iLookDECISIONS%aquiferIni)%iDecision)
+   case(fullStart)
+    aquifer_start  = 1._dp ! Start with full aquifer, since easier to spin up by draining than filling (filling we need to wait for precipitation) 
+   case(emptyStart)
+    aquifer_start  = 0._dp ! Start with empty aquifer ! If want to compare model method outputs, empty start leads to quicker equilibrium
+   case default
+    message=trim(message)//'unable to identify decision for initial aquifer storage'
+   return
+  end select  ! aquifer option
+#endif
+
   ! Set the basin variables that pertain to the GRU
   select case(model_decisions(iLookDECISIONS%spatial_gw)%iDecision)
     case(localColumn) 
       gru_data%bvarStruct%var(iLookBVAR%basin__AquiferStorage)%dat(1) = 0._dp
     case(singleBasin)
+      gru_data%bvarStruct%var(iLookBVAR%basin__AquiferStorage)%dat(1) = aquifer_start
       gru_data%bvarStruct%var(iLookBVAR%basin__AquiferStorage)%dat(1) = 1._dp
     case default
       message=trim(message)//'unable to identify decision for regional representation of groundwater'

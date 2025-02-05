@@ -316,6 +316,7 @@ subroutine readHRURestart(indxGRU, indxHRU, hru_data, err, message)
   USE nrtype                                                  ! variable types, etc.
   ! functions and subroutines
   USE time_utils_module,only:elapsedSec                       ! calculate the elapsed time
+  USE read_icond_module,only:check_icond                     ! module to check initial conditions
   USE var_derive_module,only:calcHeight                       ! module to calculate height at layer interfaces and layer mid-point
   USE var_derive_module,only:v_shortcut                       ! module to calculate "short-cut" variables
   USE var_derive_module,only:rootDensty                       ! module to calculate the vertical distribution of roots
@@ -336,7 +337,7 @@ subroutine readHRURestart(indxGRU, indxHRU, hru_data, err, message)
   USE mDecisions_module,only:&
   fullStart,      & ! start with full aquifer
   emptyStart        ! start with empty aquifer
-#endif
+ #endif
   implicit none
   ! Dummy variables
   integer(c_int),intent(in)               :: indxGRU            !  index of GRU in gru_struc
@@ -350,10 +351,11 @@ subroutine readHRURestart(indxGRU, indxHRU, hru_data, err, message)
   character(LEN=256)                      :: restartFile        ! restart file name
   integer(i4b)                            :: nGRU
   real(dp)                                :: aquifer_start      ! initial aquifer storage
+ 
   ! ---------------------------------------------------------------------------------------
   ! initialize error control
   err=0; message='hru_actor_readRestart/'
-
+ 
   ! *****************************************************************************
   ! *** compute ancillary variables
   ! *****************************************************************************
