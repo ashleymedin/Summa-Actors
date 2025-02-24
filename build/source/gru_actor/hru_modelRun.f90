@@ -167,12 +167,15 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
   
   computeVegFluxFlag = (hru_data%ComputeVegFlux == yes)
 
+  ! initialize the number of flux calls
+  hru_data%diagStruct%var(iLookDIAG%numFluxCalls)%dat(1) = 0._dp
+
   !******************************************************************************
   !****************************** From run_oneHRU *******************************
   !******************************************************************************
   ! water pixel: do nothing
   if (hru_data%typeStruct%var(iLookTYPE%vegTypeIndex) == isWater) then
-      ! Set wall_clock time to zero so it does not get a random value
+    ! Set wall_clock time to zero so it does not get a random value
     hru_data%diagStruct%var(iLookDIAG%wallClockTime)%dat(1) = 0._dp 
     return
   endif
@@ -223,9 +226,6 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
         hru_data%tmZoneOffsetFracDay,         & ! time zone offset in fractional days
         err,cmessage)                  ! error control
   if(err/=0)then;err=20; message=trim(message)//cmessage; return; endif
- 
-  ! initialize the number of flux calls
-  hru_data%diagStruct%var(iLookDIAG%numFluxCalls)%dat(1) = 0._dp
 
   ! run the model for a single HRU
   call coupled_em(&
