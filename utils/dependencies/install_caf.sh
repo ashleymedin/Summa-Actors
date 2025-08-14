@@ -1,19 +1,21 @@
 #!/bin/bash
-INSTALL_DIR=$PWD/caf
+#####################################################################
+# CAF Installation Script
+#
+# Usage:
+#   ./install_caf.
+#
 
-# Load the necessary modules (cluster dependent below work for anvil)
-# module load gcc/11.2.0 
-# module load netlib-lapack
-# module load netcdf-fortran
+#####################################################################
 
-wget https://github.com/actor-framework/actor-framework/archive/refs/tags/1.0.2.tar.gz
-tar -xvf 1.0.2.tar.gz
+CAF_ver=1.1.0 # CAF version number
 
-
-echo "Installing CAF to $INSTALL_DIR"
-
-cd actor-framework-1.0.2
-./configure --prefix=$INSTALL_DIR
+export CAFDIR=$PWD/install/caf
+wget https://github.com/actor-framework/actor-framework/archive/refs/tags/$CAF_ver.tar.gz
+tar -xvf $CAF_ver.tar.gz
+echo "Installing CAF to $CAFDIR"
+cd actor-framework-$CAF_ver
+./configure --prefix=$CAFDIR
 cd build
 make -j 8
 make install

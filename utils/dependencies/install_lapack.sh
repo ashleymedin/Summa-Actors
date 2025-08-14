@@ -9,12 +9,14 @@
 #   export LAPACK_PATH="path/to/lapack/liblapack.so"
 # Then modify the CMAKE command to include the following flag:
 #  -DUSE_CUSTOM_LAPACK=ON
+#####################################################################
 
-export BLASDIR=$PWD/lapack
+LAPACK_ver=3.12.1 # LAPACK version number
 
-wget https://github.com/Reference-LAPACK/lapack/archive/refs/tags/v3.12.0.tar.gz
-tar -xf v3.12.0.tar.gz
-cd lapack-3.12.0/
+export BLASDIR=$PWD/install/lapack
+wget https://github.com/Reference-LAPACK/lapack/archive/refs/tags/v$LAPACK_ver.tar.gz
+tar -xf v$LAPACK_ver.tar.gz
+cd lapack-$LAPACK_ver/
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_LIBDIR=$BLASDIR -DBUILD_SHARED_LIBS=ON .. 
