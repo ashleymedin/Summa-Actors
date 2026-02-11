@@ -48,6 +48,7 @@ subroutine f_allocate(num_gru, err, message_r) bind(C, name="f_allocate")
   type(c_ptr),          intent(out)       :: message_r
   ! local variables
   integer(i4b)                            :: iStruct,iGRU      ! looping variables
+  integer(i4b)                            :: hruCount          ! number of local hydrologic response units
   character(len=256)                      :: message           ! error message
   character(len=256)                      :: cmessage          ! error message
   integer(i4b) :: hruCount
