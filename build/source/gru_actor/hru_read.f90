@@ -2,7 +2,7 @@ module hru_read
 
 
 USE,intrinsic :: iso_c_binding
-USE nrtype
+USE nr_type
 USE data_types,only:&
                     var_i,          &  
                     var_i8,         &
@@ -242,7 +242,7 @@ subroutine getFirstTimestep(iFile, iRead, err)
     
   USE multiconst,only:secprday                  ! number of seconds in a day
   
-  USE nr_utility_module,only:arth               ! get a sequence of numbers
+  USE nr_utils_module,only:arth               ! get a sequence of numbers
 
   implicit none
 

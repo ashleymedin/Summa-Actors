@@ -1,6 +1,6 @@
 module summa_init_struc
   USE iso_c_binding
-  USE nrtype
+  USE nr_type
   USE summa_type, only:summa1_type_dec                        ! master summa data type
   implicit none
   public :: f_allocate

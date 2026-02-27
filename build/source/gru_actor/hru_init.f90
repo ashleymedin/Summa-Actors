@@ -1,7 +1,7 @@
 module INIT_HRU_ACTOR
 ! used to declare and allocate summa data structures and initialize model state to known values
 USE,intrinsic :: iso_c_binding
-USE nrtype          ! variable types, etc.
+USE nr_type          ! variable types, etc.
 USE data_types,only:&
                     ! no spatial dimension
                     var_i,               & ! x%var(:)            (i4b)
@@ -68,7 +68,7 @@ subroutine initHRU(indx_gru, indx_hru, hru_data, err, message)
   ! * desired modules
   ! ---------------------------------------------------------------------------------------
   ! data types
-  USE nrtype                                                  ! variable types, etc.
+  USE nr_type                                                  ! variable types, etc.
   ! subroutines and functions: allocate space
   USE allocspace_module,only:allocLocal
   ! timing variables
@@ -147,7 +147,7 @@ subroutine initHRU(indx_gru, indx_hru, hru_data, err, message)
     case('flux'); call allocLocal(flux_meta,hru_data%fluxStruct,nSnow,nSoil,err,cmessage);    ! model fluxes
     case('bpar'); call allocLocal(bpar_meta,hru_data%bparStruct,nSnow=0,nSoil=0,err=err,message=cmessage);  ! basin-average variables
     case('bvar'); call allocLocal(bvar_meta,hru_data%bvarStruct,nSnow=0,nSoil=0,err=err,message=cmessage);  ! basin-average variables
-    case('lookup'); cycle ! allocated in enthaplpyTemp.f90
+    case('lookup'); cycle ! allocated in convertEnthalpyTemp.f90
     case('deriv'); cycle
     case default; err=20; message='unable to find structure name: '//trim(structInfo(iStruct)%structName)
   end select
@@ -219,7 +219,7 @@ subroutine setupHRU(indxGRU, indxHRU, hru_data, err, message)
   ! ---------------------------------------------------------------------------------------
   ! * desired modules
   ! ---------------------------------------------------------------------------------------
-  USE nrtype                                                  ! variable types, etc.
+  USE nr_type                                                  ! variable types, etc.
   USE summa_init_struc,only:init_struc
   ! subroutines and functions
   use time_utils_module,only:elapsedSec                       ! calculate the elapsed time
@@ -313,7 +313,7 @@ end subroutine setupHRU
 ! public subroutine summa_readRestart: read restart data and reset the model state
 ! **************************************************************************************************
 subroutine readHRURestart(indxGRU, indxHRU, hru_data, err, message)
-  USE nrtype                                                  ! variable types, etc.
+  USE nr_type                                                  ! variable types, etc.
   ! functions and subroutines
   USE time_utils_module,only:elapsedSec                       ! calculate the elapsed time
   USE var_derive_module,only:calcHeight                       ! module to calculate height at layer interfaces and layer mid-point

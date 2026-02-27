@@ -1,6 +1,6 @@
 module actor_data_types
   USE, intrinsic :: iso_c_binding
-  USE nrtype, integerMissing=>nr_integerMissing
+  USE nr_type, integerMissing=>nr_integerMissing
   USE data_types
   implicit none
   private

@@ -21,7 +21,7 @@
 module summa_modelRun
 ! calls the model physics
 USE,intrinsic :: iso_c_binding
-USE nrtype
+USE nr_type
 USE actor_data_types,only:hru_type
 ! access missing values
 USE globalData,only:integerMissing         ! missing integer
@@ -81,9 +81,8 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
   ! * desired modules
   ! ---------------------------------------------------------------------------------------
   ! data types
-  USE nrtype                                   ! variable types, etc.
+  USE nr_type                                   ! variable types, etc.
   ! subroutines and functions
-  USE nr_utility_module,only:indexx            ! sort vectors in ascending order
   USE vegPhenlgy_module,only:vegPhenlgy        ! module to compute vegetation phenology
   USE time_utils_module,only:elapsedSec        ! calculate the elapsed time
   USE module_sf_noahmplsm,only:redprm          ! module to assign more Noah-MP parameters

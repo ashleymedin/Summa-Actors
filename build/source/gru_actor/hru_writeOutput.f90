@@ -15,7 +15,7 @@ USE actor_data_types,only:hru_type
 ! named variables to define new output files
 USE netcdf
 USE netcdf_util_module,only:netcdf_err 
-USE nrtype
+USE nr_type
 USE globalData,only:noNewFiles
 USE globalData,only:newFileEveryOct1
 USE globalData,only:chunkSize               ! size of chunks to write
@@ -70,7 +70,7 @@ public::setFinalizeStatsFalse
 integer(i4b),parameter      :: maxSpectral=2              ! maximum number of spectral bands
 contains
 subroutine writeHRUOutput(indxGRU, indxHRU, timestep, outputStep, hru_data, err, message)
-  USE nrtype
+  USE nr_type
   USE globalData,only:structInfo
   USE globalData,only:startWrite,endWrite
   USE globalData,only:maxLayers                               ! maximum number of layers
@@ -270,7 +270,7 @@ subroutine hru_writeRestart(&
   outputStep,                & ! unused :(
   hru_data,           & ! local HRU data  
   err) 
-  USE nrtype
+  USE nr_type
   USE globalData,only:structInfo
   USE globalData,only:startWrite,endWrite
   USE globalData,only:maxLayers                               ! maximum number of layers

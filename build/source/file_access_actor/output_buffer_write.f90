@@ -4,7 +4,7 @@ module output_buffer_write
   USE netcdf
   USE netcdf_util_module,only:netcdf_err  ! netcdf error handling function
   ! top-level data types
-  USE nrtype
+  USE nr_type
   USE globalData,only: integerMissing, realMissing
 
   USE globalData,only:gru_struc  ! gru->hru mapping structure

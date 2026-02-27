@@ -1,6 +1,6 @@
 module hru_interface
   USE,intrinsic :: iso_c_binding
-  USE nrtype
+  USE nr_type
 
   implicit none
   private

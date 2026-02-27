@@ -24,7 +24,7 @@ module fileAccess_writeOutput
   USE netcdf
   USE netcdf_util_module,only:netcdf_err                    ! netcdf error handling function
   ! top-level data types
-  USE nrtype
+  USE nr_type
   ! missing values
   USE globalData,only: integerMissing, realMissing
   ! provide access to global data

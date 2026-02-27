@@ -1,6 +1,6 @@
 module gru_actor
 USE,intrinsic :: iso_c_binding
-USE nrtype
+USE nr_type
 USE globalData,only:integerMissing
 USE globalData,only:realMissing
 
@@ -124,8 +124,8 @@ subroutine setupGRU(iGRU, err, message)
     closedForm,    &                      ! use temperature with closed form heat capacity
     enthalpyFormLU,&                      ! use enthalpy with soil temperature-enthalpy lookup tables
     enthalpyForm                          ! use enthalpy with soil temperature-enthalpy analytical solution
-  USE enthalpyTemp_module,only:T2H_lookup_snWat               ! module to calculate a look-up table for the snow temperature-enthalpy conversion
-  USE enthalpyTemp_module,only:T2L_lookup_soil                ! module to calculate a look-up table for the soil temperature-enthalpy conversion
+  USE convertEnthalpyTemp_module,only:T2H_lookup_snWat               ! module to calculate a look-up table for the snow temperature-enthalpy conversion
+  USE convertEnthalpyTemp_module,only:T2L_lookup_soil                ! module to calculate a look-up table for the soil temperature-enthalpy conversion
 
 #else
   

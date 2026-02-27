@@ -1,6 +1,6 @@
 module forcing_file_info
   USE, intrinsic :: iso_c_binding
-  USE nrtype
+  USE nr_type
   USE globalData,only:integerMissing   ! integer missing value
   USE data_types,only:dlength          ! global data structure for forcing data
   implicit none

@@ -1,6 +1,6 @@
 module output_buffer
   USE, intrinsic :: iso_c_binding
-  USE nrtype
+  USE nr_type
   USE globalData,only:integerMissing      ! missing integer value
   USE globalData,only:realMissing         ! missing double precision value
   USE data_types
