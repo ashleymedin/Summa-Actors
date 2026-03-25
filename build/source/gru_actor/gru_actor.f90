@@ -122,8 +122,8 @@ subroutine setupGRU(iGRU, err, message)
   ! look-up values for the choice of variable in energy equations (BE residual or IDA state variable)
   USE mDecisions_module,only:&
     closedForm,    &                      ! use temperature with closed form heat capacity
-    enthalpyFormLU,&                      ! use enthalpy with soil temperature-enthalpy lookup tables
-    enthalpyForm                          ! use enthalpy with soil temperature-enthalpy analytical solution
+    enthalpyForm,&                        ! use enthalpy with soil temperature-enthalpy lookup tables
+    enthalpyFormAN                        ! use enthalpy with soil temperature-enthalpy analytical solution
   USE convertEnthalpyTemp_module,only:T2H_lookup_snWat               ! module to calculate a look-up table for the snow temperature-enthalpy conversion
   USE convertEnthalpyTemp_module,only:T2L_lookup_soil                ! module to calculate a look-up table for the soil temperature-enthalpy conversion
 
@@ -193,7 +193,7 @@ subroutine setupGRU(iGRU, err, message)
   )
 
 #ifdef V4_ACTIVE
-  if(model_decisions(iLookDECISIONS%nrgConserv)%iDecision == enthalpyFormLU) needLookup_soil = .true. 
+  if(model_decisions(iLookDECISIONS%nrgConserv)%iDecision == enthalpyForm) needLookup_soil = .true. 
   ! *****************************************************************************
   ! *** compute derived model variables that are pretty much constant for the basin as a whole
   ! *****************************************************************************

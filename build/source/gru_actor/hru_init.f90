@@ -2,23 +2,8 @@ module INIT_HRU_ACTOR
 ! used to declare and allocate summa data structures and initialize model state to known values
 USE,intrinsic :: iso_c_binding
 USE nr_type          ! variable types, etc.
-USE data_types,only:&
-                    ! no spatial dimension
-                    var_i,               & ! x%var(:)            (i4b)
-                    var_i8,              & ! x%var(:)            (i8b)
-                    var_d,               & ! x%var(:)            (dp)
-                    var_ilength,         & ! x%var(:)%dat        (i4b)
-                    var_dlength            ! x%var(:)%dat        (dp)
-#ifdef V4_ACTIVE
-USE data_types,only:zlookup               ! x%z(:)%var(:)%lookup(:) -- lookup tables
-#endif
 USE actor_data_types,only:hru_type             ! hru_type
                     
-! access missing values
-USE globalData,only:integerMissing   ! missing integer
-USE globalData,only:realMissing      ! missing double precision number
-! named variables for run time options
-USE globalData,only:iRunModeFull,iRunModeGRU,iRunModeHRU
 ! metadata structures
 USE globalData,only:time_meta,forc_meta,attr_meta,type_meta ! metadata structures
 USE globalData,only:prog_meta,diag_meta,flux_meta,id_meta   ! metadata structures
@@ -46,12 +31,6 @@ USE var_lookup,only:iLookID                                   ! look-up values f
 USE var_lookup,only:iLookPROG                               ! look-up values for local column model prognostic (state) variables
 USE var_lookup,only:iLookDIAG                               ! look-up values for local column model diagnostic variables
 USE var_lookup,only:iLookFLUX                               ! look-up values for local column model fluxes
-USE globalData,only:urbanVegCategory                        ! vegetation category for urban areas
-
-! named variables to define LAI decisions
-USE mDecisions_module,only:&
- monthlyTable,& ! LAI/SAI taken directly from a monthly table for different vegetation classes
- specified      ! LAI/SAI computed from green vegetation fraction and winterSAI and summerLAI parameters
 
 ! safety: set private unless specified otherwise
 implicit none
@@ -80,14 +59,12 @@ subroutine initHRU(indx_gru, indx_hru, hru_data, err, message)
   USE globalData,only:gru_struc                               ! gru-hru mapping structures
   USE globalData,only:structInfo                              ! information on the data structures
   USE globalData,only:startTime,finshTime,refTime,oldTime
-
-  USE var_lookup,only:maxvarFreq                              ! maximum number of output files
   USE var_lookup,only:iLookFreq                               ! output frequency lookup table
   implicit none
   ! Dummy Variables
   integer(c_int),intent(in)                  :: indx_gru      ! indx of the parent GRU
   integer(c_int),intent(in)                  :: indx_hru      ! indx of the HRU
-  type(hru_type),intent(out)                 :: hru_data      ! hru data structure (hru_type
+  type(hru_type),intent(out)                 :: hru_data      ! hru data structure (hru_type)
   integer(c_int),intent(out)                 :: err  
   character(len=256),intent(out)             :: message       ! error message
   ! Local Variables
@@ -112,7 +89,7 @@ subroutine initHRU(indx_gru, indx_hru, hru_data, err, message)
   do iStruct=1,4
   select case(iStruct)
     case(1); call allocLocal(time_meta, hru_data%startTime_hru, err=err, message=cmessage)  ! start time for the model simulation
-    case(2); call allocLocal(time_meta, hru_data%finishTime_hru, err=err, message=cmessage)  ! end time for the model simulation
+    case(2); call allocLocal(time_meta, hru_data%finishTime_hru, err=err, message=cmessage) ! end time for the model simulation
     case(3); call allocLocal(time_meta, hru_data%refTime_hru,   err=err, message=cmessage)  ! reference time for the model simulation
     case(4); call allocLocal(time_meta, hru_data%oldTime_hru,   err=err, message=cmessage)  ! time from the previous step
   end select
@@ -148,7 +125,7 @@ subroutine initHRU(indx_gru, indx_hru, hru_data, err, message)
     case('bpar'); call allocLocal(bpar_meta,hru_data%bparStruct,nSnow=0,nSoil=0,err=err,message=cmessage);  ! basin-average variables
     case('bvar'); call allocLocal(bvar_meta,hru_data%bvarStruct,nSnow=0,nSoil=0,err=err,message=cmessage);  ! basin-average variables
     case('lookup'); cycle ! allocated in convertEnthalpyTemp.f90
-    case('deriv'); cycle
+    case('deriv'); cycle ! derivatives are not stored in the data structure, but are instead computed on the fly and stored in local variables
     case default; err=20; message='unable to find structure name: '//trim(structInfo(iStruct)%structName)
   end select
   ! check errors
@@ -163,8 +140,6 @@ subroutine initHRU(indx_gru, indx_hru, hru_data, err, message)
 	! NOTE: This is done here, rather than in the loop above, because dpar is not one of the "standard" data structures
 	call allocLocal(mpar_meta,hru_data%dparStruct,nSnow,nSoil,err,cmessage);    ! default model parameters
 	if(err/=0)then; message=trim(message)//trim(cmessage)//' [problem allocating dparStruct]'; print*,message;return;endif
-	 
-
 
   ! *****************************************************************************
   ! *** allocate space for output statistics data structures
@@ -188,7 +163,6 @@ subroutine initHRU(indx_gru, indx_hru, hru_data, err, message)
       return
     endif
   end do ! iStruct
-
 
   ! Intilaize the statistics data structures
   allocate(hru_data%statCounter%var(maxVarFreq), stat=err)
@@ -221,28 +195,6 @@ subroutine setupHRU(indxGRU, indxHRU, hru_data, err, message)
   ! ---------------------------------------------------------------------------------------
   USE nr_type                                                  ! variable types, etc.
   USE summa_init_struc,only:init_struc
-  ! subroutines and functions
-  use time_utils_module,only:elapsedSec                       ! calculate the elapsed time
-  USE mDecisions_module,only:mDecisions                       ! module to read model decisions
-  USE paramCheck_module,only:paramCheck                       ! module to check consistency of model parameters
-  USE pOverwrite_module,only:pOverwrite                       ! module to overwrite default parameter values with info from the Noah tables
-  USE var_derive_module,only:fracFuture                       ! module to calculate the fraction of runoff in future time steps (time delay histogram)
-  USE module_sf_noahmplsm,only:read_mp_veg_parameters         ! module to read NOAH vegetation tables
-  ! global data structures
-  USE globalData,only:gru_struc                               ! gru-hru mapping structures
-  USE globalData,only:localParFallback                        ! local column default parameters
-  USE globalData,only:model_decisions                         ! model decision structure
-  USE globalData,only:greenVegFrac_monthly                    ! fraction of green vegetation in each month (0-1)
-  ! output constraints
-  USE globalData,only:maxLayers                               ! maximum number of layers
-  USE globalData,only:maxSnowLayers                           ! maximum number of snow layers
-  ! timing variables
-  USE globalData,only:startSetup,endSetup                     ! date/time for the start and end of the parameter setup
-  USE globalData,only:elapsedSetup                            ! elapsed time for the parameter setup
-  ! Noah-MP parameters
-  USE NOAHMP_VEG_PARAMETERS,only:SAIM,LAIM                    ! 2-d tables for stem area index and leaf area index (vegType,month)
-  USE NOAHMP_VEG_PARAMETERS,only:HVT,HVB                      ! height at the top and bottom of vegetation (vegType)
-
   ! ---------------------------------------------------------------------------------------
   ! * variables
   ! ---------------------------------------------------------------------------------------
@@ -315,16 +267,12 @@ end subroutine setupHRU
 subroutine readHRURestart(indxGRU, indxHRU, hru_data, err, message)
   USE nr_type                                                  ! variable types, etc.
   ! functions and subroutines
-  USE time_utils_module,only:elapsedSec                       ! calculate the elapsed time
   USE var_derive_module,only:calcHeight                       ! module to calculate height at layer interfaces and layer mid-point
   USE var_derive_module,only:v_shortcut                       ! module to calculate "short-cut" variables
   USE var_derive_module,only:rootDensty                       ! module to calculate the vertical distribution of roots
   USE var_derive_module,only:satHydCond                       ! module to calculate the saturated hydraulic conductivity in each soil layer
   ! global data structures
   USE globalData,only:model_decisions                         ! model decision structure
-  ! timing variables
-  USE globalData,only:startRestart,endRestart                 ! date/time for the start and end of reading model restart files
-  USE globalData,only:elapsedRestart                          ! elapsed time to read model restart files
   ! Lookup values
   USE var_lookup,only:iLookDECISIONS                          ! look-up values for model decisions
   USE var_lookup,only:iLookBVAR                               ! look-up values for basin-average model variables
