@@ -109,7 +109,6 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
   integer(i4b)                              :: nSnow                  ! number of snow layers
   integer(i4b)                              :: nSoil                  ! number of soil layers
   integer(i4b)                              :: nLayers                ! total number of layers
-  real(dp), allocatable                     :: zSoilReverseSign(:)    ! height at bottom of each soil layer, negative downwards (m)
   ! ---------------------------------------------------------------------------------------
   hruId = gru_struc(indxGRU)%hruInfo(indxHRU)%hru_id
 
@@ -173,12 +172,6 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
     hru_data%diagStruct%var(iLookDIAG%wallClockTime)%dat(1) = 0._dp 
     return
   endif
-
-  ! get height at bottom of each soil layer, negative downwards (used in Noah MP)
-  allocate(zSoilReverseSign(nSoil),stat=err)
-  if(err/=0)then; message=trim(message)//'problem allocating space for zSoilReverseSign'; return; endif
-
-  zSoilReverseSign(:) = -hru_data%progStruct%var(iLookPROG%iLayerHeight)%dat(nSnow+1:nLayers)
  
   ! populate parameters in Noah-MP modules
   ! Passing a maxSoilLayer in order to pass the check for NROOT, that is done to avoid making any changes to Noah-MP code.
@@ -186,13 +179,8 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
   call REDPRM(hru_data%typeStruct%var(iLookTYPE%vegTypeIndex),      & ! vegetation type index
               hru_data%typeStruct%var(iLookTYPE%soilTypeIndex),     & ! soil type
               hru_data%typeStruct%var(iLookTYPE%slopeTypeIndex),    & ! slope type index
-              zSoilReverseSign,                            & ! * not used: height at bottom of each layer [NOTE: negative] (m)
               maxSoilLayers,                               & ! number of soil layers
               urbanVegCategory)                              ! vegetation category for urban areas
-
-  ! deallocate height at bottom of each soil layer(used in Noah MP)
-  deallocate(zSoilReverseSign,stat=err)
-  if(err/=0)then;message=trim(message)//'problem deallocating space for zSoilReverseSign'; return; endif
  
 
   ! overwrite the minimum resistance
