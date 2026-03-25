@@ -114,9 +114,7 @@ module actor_data_types
   endtype gru_hru_time_intVec
 
   type, public :: hru_type
-#ifdef V4_ACTIVE
     type(zLookup),pointer                      :: lookupStruct               ! z(:)%var(:)%lookup(:) -- lookup tables
-#endif
     type(var_dlength),pointer                  :: forcStat                   ! model forcing data
     type(var_dlength),pointer                  :: progStat                   ! model prognostic (state) variables
     type(var_dlength),pointer                  :: diagStat                   ! model diagnostic variables
@@ -169,9 +167,7 @@ module actor_data_types
 
   ! Output Structure Type
   type, public :: summa_output_type
-#ifdef V4_ACTIVE  
-    type(gru_hru_z_vLookup)                          :: lookupStruct                   ! x%gru(:)%hru(:)%z(:)%var(:)%lookup(:) -- lookup tables
-#endif
+    type(gru_hru_z_vLookup)                           :: lookupStruct                   ! x%gru(:)%hru(:)%z(:)%var(:)%lookup(:) -- lookup tables
     ! define the statistics structures
     type(gru_hru_time_doubleVec)                      :: forcStat                      ! x%gru(:)%hru(:)%var(:)%tim(:)%dat -- model forcing data
     type(gru_hru_time_doubleVec)                      :: progStat                      ! x%gru(:)%hru(:)%var(:)%tim(:)%dat -- model prognostic (state) variables

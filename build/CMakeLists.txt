@@ -10,20 +10,13 @@ message("\nSelected Bulid Type: ${CMAKE_BUILD_TYPE}\n")
 
 # Optional Dependencies
 option(USE_SUNDIALS "Use IDA solver from sundilas suite" OFF)
-option(USE_V4 "Use V4 interface" OFF)
-set(EXT_TARGETS) # list of external targets to link to
 
 if (USE_SUNDIALS)
     message("ENABLING SUNDIALS")
-    set(USE_V4 ON CACHE BOOL "Use V4 interface" FORCE)
     find_package(SUNDIALS REQUIRED)
     list(APPEND EXT_TARGETS SUNDIALS::fida_mod_shared 
                             SUNDIALS::fkinsol_mod_shared)
     add_compile_definitions(SUNDIALS_ACTIVE)
-endif()
-
-if (USE_V4)
-    add_compile_definitions(ACTORS_ACTIVE V4_ACTIVE)
 endif()
 
 # Required Dependencies

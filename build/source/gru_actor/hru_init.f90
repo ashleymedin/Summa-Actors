@@ -10,9 +10,7 @@ USE globalData,only:prog_meta,diag_meta,flux_meta,id_meta   ! metadata structure
 USE globalData,only:mpar_meta,indx_meta                     ! metadata structures
 USE globalData,only:bpar_meta,bvar_meta                     ! metadata structures
 USE globalData,only:averageFlux_meta                        ! metadata for time-step average fluxes
-#ifdef V4_ACTIVE
 USE globalData,only:lookup_meta 
-#endif
 ! statistics metadata structures
 USE globalData,only:statForc_meta                           ! child metadata for stats
 USE globalData,only:statProg_meta                           ! child metadata for stats
@@ -228,7 +226,6 @@ subroutine setupHRU(indxGRU, indxHRU, hru_data, err, message)
   do ivar=1, size(init_struc%bvarStruct%gru(indxGRU)%var(:))
     hru_data%bvarStruct%var(ivar)%dat(:) = init_struc%bvarStruct%gru(indxGRU)%var(ivar)%dat(:)
   enddo
-#ifdef V4_ACTIVE
   if (allocated(init_struc%lookupStruct%gru(indxGRU)%hru(indxHRU)%z)) then
     if (.not. allocated(hru_data%lookupStruct%z)) then
       allocate(hru_data%lookupStruct%z(size(init_struc%lookupStruct%gru(indxGRU)%hru(indxHRU)%z)))
@@ -245,7 +242,6 @@ subroutine setupHRU(indxGRU, indxHRU, hru_data, err, message)
       end do
     end do
   endif
-#endif
   do ivar=1, size(init_struc%progStruct%gru(indxGRU)%hru(indxHRU)%var(:))
     hru_data%progStruct%var(ivar)%dat(:) = init_struc%progStruct%gru(indxGRU)%hru(indxHRU)%var(ivar)%dat(:)
   enddo
@@ -280,11 +276,9 @@ subroutine readHRURestart(indxGRU, indxHRU, hru_data, err, message)
   USE mDecisions_module,only:&                                ! look-up values for the choice of method for the spatial representation of groundwater
   localColumn, & ! separate groundwater representation in each local soil column
   singleBasin    ! single groundwater store over the entire basin
-#ifdef V4_ACTIVE
   USE mDecisions_module,only:&
   fullStart,      & ! start with full aquifer
   emptyStart        ! start with empty aquifer
-#endif
   implicit none
   ! Dummy variables
   integer(c_int),intent(in)               :: indxGRU            !  index of GRU in gru_struc
@@ -353,7 +347,6 @@ subroutine readHRURestart(indxGRU, indxHRU, hru_data, err, message)
   !  and ensure that basin-average aquifer storage is zero when groundwater is included in the local columns (localColumn).
 
   aquifer_start  = 1._dp
-#ifdef V4_ACTIVE
   ! select aquifer option
   select case(model_decisions(iLookDECISIONS%aquiferIni)%iDecision)
    case(fullStart)
@@ -364,7 +357,6 @@ subroutine readHRURestart(indxGRU, indxHRU, hru_data, err, message)
     message=trim(message)//'unable to identify decision for initial aquifer storage'
    return
   end select  ! aquifer option
-#endif
 
   ! select groundwater option
   select case(model_decisions(iLookDECISIONS%spatial_gw)%iDecision)
@@ -372,10 +364,8 @@ subroutine readHRURestart(indxGRU, indxHRU, hru_data, err, message)
   ! the basin-average aquifer storage is not used if the groundwater is included in the local column
   case(localColumn)
    hru_data%bvarStruct%var(iLookBVAR%basin__AquiferStorage)%dat(1) = 0._dp ! set to zero to be clear that there is no basin-average aquifer storage in this configuration
-#ifdef V4_ACTIVE
    if(model_decisions(iLookDECISIONS%aquiferIni)%iDecision==emptyStart) &
      hru_data%progStruct%var(iLookPROG%scalarAquiferStorage)%dat(1) = aquifer_start ! leave at initialized values if fullStart
-#endif
 
   ! the local column aquifer storage is not used if the groundwater is basin-average
   ! (i.e., where multiple HRUs drain to a basin-average aquifer)
@@ -442,7 +432,6 @@ subroutine setBEStepsIDATol(handle_hru_data,    &
 
   call c_f_pointer(handle_hru_data, hru_data)
 
-#ifdef V4_ACTIVE
   hru_data%mparStruct%var(iLookPARAM%be_steps)%dat(1)            = REAL(be_steps)
   hru_data%mparStruct%var(iLookPARAM%relTolTempCas)%dat(1)       = relTolTempCas 
   hru_data%mparStruct%var(iLookPARAM%absTolTempCas)%dat(1)       = absTolTempCas
@@ -458,6 +447,6 @@ subroutine setBEStepsIDATol(handle_hru_data,    &
   hru_data%mparStruct%var(iLookPARAM%absTolMatric)%dat(1)        = absTolMatric
   hru_data%mparStruct%var(iLookPARAM%relTolAquifr)%dat(1)        = relTolAquifr
   hru_data%mparStruct%var(iLookPARAM%absTolAquifr)%dat(1)        = absTolAquifr
-#endif
+  
 end subroutine setBEStepsIDATol
 end module INIT_HRU_ACTOR
