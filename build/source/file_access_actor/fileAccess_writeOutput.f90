@@ -359,7 +359,7 @@ end subroutine writeParam
 ! **************************************************************************************
 subroutine writeData(ncid,outputTimestep,outputTimestepUpdate,nSteps, &
             minGRU, maxGRU, numGRU, & 
-            meta,stat,dat,structName,map,indx,err,message)
+            meta,stat,datt,structName,map,indx,err,message)
   USE data_types,only:var_info                       ! metadata type
   USE var_lookup,only:maxvarStat                     ! index into stats structure
   USE var_lookup,only:iLookVarType                   ! index into type structure
@@ -380,42 +380,49 @@ subroutine writeData(ncid,outputTimestep,outputTimestepUpdate,nSteps, &
   integer(i4b)  ,intent(in)        :: numGRU            ! number of GRUs to write 
   type(var_info),intent(in)        :: meta(:)           ! meta data
   class(*)      ,intent(in)        :: stat              ! stats data
-  class(*)      ,intent(in)        :: dat               ! timestep data
+  class(*)      ,intent(in)        :: datt              ! timestep data
   character(*)  ,intent(in)        :: structName
   integer(i4b)  ,intent(in)        :: map(:)            ! map into stats child struct
   type(gru_hru_time_intVec) ,intent(in) :: indx         ! index data
   integer(i4b)  ,intent(out)       :: err               ! error code
   character(*)  ,intent(out)       :: message           ! error message
-  ! local variables
+   ! local variables
   integer(i4b)                     :: iVar              ! variable index
   integer(i4b)                     :: iStat             ! statistics index
   integer(i4b)                     :: iFreq             ! frequency index
   integer(i4b)                     :: ncVarID           ! used only for time
+  character(LEN=256)               :: cmessage          ! error message of downwind routine
   ! output arrays
   real(rkind)                      :: timeVec(nSteps)   ! timeVal to copy
-  integer(i4b),parameter           :: ixInteger=1001    ! named variable for integer
-  integer(i4b),parameter           :: ixReal=1002       ! named variable for real
   integer(i4b)                     :: stepCounter       ! counter to know how much data we have to write, needed because we do not always write nSteps
   integer(i4b)                     :: iStep
   integer(i4b)                     :: iGRU
   real(rkind)                      :: val
   integer(i4b)                     :: nHRUrun
   ! initialize error control
-  err=0;message="writeData/"
+  err=0
+
   ! loop through output frequencies
   do iFreq=1,maxvarFreq
+
     ! skip frequencies that are not needed
     if(.not.outFreq(iFreq)) cycle
+
     ! loop through model variables
     do iVar = 1,size(meta)
       stepCounter = 0
+      ! initialize message
+      message="writeData/"//trim(meta(iVar)%varName)
 
+      ! *** write time information
       if (meta(iVar)%varName=='time' .and. structName == 'forc')then
+        message=trim(message)//':' ! add statistic (none) to message 
         ! get variable index
         call writeForcTime(ncid, minGRU, maxGRU, outputTimestep, &
                            outputTimestepUpdate, nSteps, iFreq, iVar, meta, &
-                           err, message)
-        if(err/=0)then; return; endif
+                           err, cmessage)
+        if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
+
         cycle
       end if  ! id time
 
@@ -425,26 +432,25 @@ subroutine writeData(ncid,outputTimestep,outputTimestepUpdate,nSteps, &
         nHRUrun = nHRUrun + size(gru_struc(iGRU)%hruInfo)
       end do ! iGRU
 
-
       ! define the statistics index
       iStat = meta(iVar)%statIndex(iFreq)
-      ! check that the variable is desired
-      if (iStat==integerMissing.or.trim(meta(iVar)%varName)=='unknown') cycle
+      message=trim(message)//'_'//trim(get_statName(iStat))//':' ! add statistic to message
 
-        ! stats output: only scalar variable type
-        if(meta(iVar)%varType==iLookVarType%scalarv) then
-          call writeScalar(ncid, outputTimeStep, outputTimeStepUpdate, nSteps, &
-                           minGRU, maxGRU, nHRUrun, iFreq, iVar, meta, stat,   &
-                           map, err, message)
-        else ! non-scalar variables: regular data structures
-          call writeVector(ncid, outputTimeStep, maxLayers, nSteps, minGRU, &
-                           maxGRU, nHRUrun, iFreq, iVar, meta, dat, indx,   &
-                           err, message)
-        end if ! not scalarv
+      ! check that the variable is desired, currently do not write large variables (unknown and routing) as they are large and slow things down a lot
+      if (iStat==integerMissing .or. meta(iVar)%varType==iLookVarType%unknown .or. meta(iVar)%varType==integerMissing) cycle
+      if (meta(iVar)%varType==iLookVarType%routing .and. .not.allowRoutingOutput) cycle ! routing variable write can be turned on with the allowRoutingOutput flag
 
-      ! process error code
-      if (err/=0) message=trim(message)//trim(meta(iVar)%varName)//'_'//trim(get_statName(iStat))
-      call netcdf_err(err,message); if (err/=0) return
+      ! stats output: only scalar variable type
+      if(meta(iVar)%varType==iLookVarType%scalarv) then
+        call writeScalar(ncid, outputTimeStep, outputTimeStepUpdate, nSteps, &
+                         minGRU, maxGRU, nHRUrun, iFreq, iVar, meta, stat,   &
+                         map, err, cmessage)
+      else ! non-scalar variables: regular data structures
+        call writeVector(ncid, outputTimeStep, nSteps, minGRU, &
+                         maxGRU, nHRUrun, iFreq, iVar, meta, datt, indx,   &
+                         err, cmessage)
+      end if ! not scalarv
+      if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
 
     end do ! iVar
   end do ! iFreq
@@ -598,15 +604,14 @@ end subroutine
 ! **********************************************************************************************************
 ! private subroutine writeVector: write vector variables from data structures 
 ! **********************************************************************************************************
-subroutine writeVector(ncid, outputTimestep, maxLayers, nSteps, minGRU, maxGRU, &
-  nHRUrun, iFreq, iVar, meta, dat, indx, err, message)
+subroutine writeVector(ncid, outputTimestep, nSteps, minGRU, maxGRU, &
+  nHRUrun, iFreq, iVar, meta, datt, indx, err, message)
   USE data_types,only:var_info                       ! metadata type
   USE var_lookup,only:iLookIndex                     ! index into index structure
   USE var_lookup,only:iLookVarType                   ! index into type structure
   implicit none
   type(var_i)   ,intent(in)             :: ncid                    ! fileid
   integer(i4b)  ,intent(inout)          :: outputTimestep(:)       ! output time step
-  integer(i4b)  ,intent(in)             :: maxLayers         ! maximum number of layers
   integer(i4b)  ,intent(in)             :: nSteps                  ! number of timeSteps
   integer(i4b)  ,intent(in)             :: minGRU                  ! minGRU index to write
   integer(i4b)  ,intent(in)             :: maxGRU                  ! maxGRU index to write - probably not needed
@@ -614,7 +619,7 @@ subroutine writeVector(ncid, outputTimestep, maxLayers, nSteps, minGRU, maxGRU, 
   integer(i4b)  ,intent(in)             :: iFreq                   ! output file index (year, month, day, timesteps)
   integer(i4b)  ,intent(in)             :: iVar                    ! netcdf variable we are writing data for
   type(var_info),intent(in)             :: meta(:)                 ! meta data
-  class(*)      ,intent(in)             :: dat               ! timestep data
+  class(*)      ,intent(in)             :: datt               ! timestep data
   type(gru_hru_time_intVec) ,intent(in) :: indx         ! index data
   integer(i4b)  ,intent(inout)          :: err
   character(*)  ,intent(inout)          :: message
@@ -639,7 +644,7 @@ subroutine writeVector(ncid, outputTimestep, maxLayers, nSteps, minGRU, maxGRU, 
   err=0; message="writeOutput.f90-writeVector/"
 
   ! initialize the data vectors
-  select type (dat)
+  select type (datt)
     class is (gru_hru_time_doubleVec); realArray(:,:) = realMissing;    dataType=ixReal
     class is (gru_hru_time_intVec);     intArray(:,:) = integerMissing; dataType=ixInteger
     class default; err=20; message=trim(message)//'data must not be scalarv and either of type gru_hru_doubleVec or gru_hru_intVec'; return
@@ -669,14 +674,14 @@ subroutine writeVector(ncid, outputTimestep, maxLayers, nSteps, minGRU, maxGRU, 
         end select ! vartype
 
         ! get the data vectors
-        select type (dat)
+        select type (datt)
             class is (gru_hru_time_doubleVec)
                 if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(iStep)%dat(iFreq)) cycle
-                realArray(hru_counter,1:datLength) = dat%gru(iGRU)%hru(iHRU)%var(iVar)%tim(iStep)%dat(1:datLength)
+                realArray(hru_counter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(iStep)%dat(1:datLength)
 
             class is (gru_hru_time_intVec)
                 if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(iStep)%dat(iFreq)) cycle
-                intArray(hru_counter,1:datLength) = dat%gru(iGRU)%hru(iHRU)%var(iVar)%tim(iStep)%dat(1:datLength)
+                intArray(hru_counter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(iStep)%dat(1:datLength)
             class default; err=20; message=trim(message)//'data must not be scalarv and either of type gru_hru_doubleVec or gru_hru_intVec'; return
         end select
 
@@ -716,7 +721,7 @@ end subroutine writeVector
 ! **************************************************************************************
 ! public subroutine writeTime: write current time to all files
 ! **************************************************************************************
-subroutine writeTime(ncid,outputTimestep,iStep,meta,dat,err,message)
+subroutine writeTime(ncid,outputTimestep,iStep,meta,datt,err,message)
   USE data_types,only:var_info                       ! metadata type
   USE var_lookup,only:iLookStat                      ! index into stat structure
   implicit none
@@ -726,7 +731,7 @@ subroutine writeTime(ncid,outputTimestep,iStep,meta,dat,err,message)
   integer(i4b)  ,intent(inout)  :: outputTimestep(:) ! output time step
   integer(i4b)  ,intent(in)     :: iStep
   type(var_info),intent(in)     :: meta(:)           ! meta data
-  type(time_i)  ,intent(in)     :: dat(:)            ! timestep data
+  type(time_i)  ,intent(in)     :: datt(:)           ! timestep data
   integer(i4b)  ,intent(out)    :: err               ! error code
   character(*)  ,intent(out)    :: message           ! error message
   ! local variables
@@ -754,7 +759,7 @@ subroutine writeTime(ncid,outputTimestep,iStep,meta,dat,err,message)
       if (err/=0) then; err=20; return; end if
 
       ! add to file
-      err = nf90_put_var(ncid%var(iFreq),ncVarID,(/dat(iVar)%tim(iStep)/),start=(/outputTimestep(iFreq)/),count=(/1/))
+      err = nf90_put_var(ncid%var(iFreq),ncVarID,(/datt(iVar)%tim(iStep)/),start=(/outputTimestep(iFreq)/),count=(/1/))
       if (err/=0) message=trim(message)//trim(meta(iVar)%varName)
       call netcdf_err(err,message)
       if (err/=0) then; err=20; return; end if
