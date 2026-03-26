@@ -22,13 +22,19 @@ module fileAccess_writeOutput
   USE, intrinsic :: iso_c_binding
   ! NetCDF types
   USE netcdf
-  USE netcdf_util_module,only:netcdf_err                    ! netcdf error handling function
+  USE netcdf_util_module,only:netcdf_err  ! netcdf error handling function
   ! top-level data types
   USE nr_type
   ! missing values
   USE globalData,only: integerMissing, realMissing
+  ! output constraints
+  USE globalData,only:maxSnowLayers       ! maximum number of snow layers
+  USE globalData,only:maxSoilLayers       ! maximum number of soil layers
+  USE globalData,only:maxLayers           ! maximum number of layers
+  USE globalData,only:nTimeDelay          ! number of timesteps in the time delay histogram
+  USE globalData,only:nSpecBand           ! maximum number of spectral bands
   ! provide access to global data
-  USE globalData,only:gru_struc                             ! gru->hru mapping structure
+  USE globalData,only:gru_struc           ! gru->hru mapping structure
   USE output_buffer,only:summa_struct
   USE output_buffer,only:outputTimeStep
   ! provide access to the derived types to define the data structures
@@ -47,6 +53,7 @@ module fileAccess_writeOutput
                       hru_d,               & ! x%hru(:)            (dp)
                       ! gru dimension
                       gru_int,             & ! x%gru(:)%var(:)     (i4b)
+                      gru_int8,            & ! x%gru(:)%var(:)            (i8b)
                       gru_double,          & ! x%gru(:)%var(:)     (dp)
                       gru_intVec,          & ! x%gru(:)%var(:)%dat (i4b)
                       gru_doubleVec,       & ! x%gru(:)%var(:)%dat (dp)
@@ -67,30 +74,27 @@ module fileAccess_writeOutput
   USE var_lookup, only: maxvarStat ! number of statistics
 
   implicit none
-  private
   public::writeOutput_fortran
-  public::writeParm
-  public::writeBasin
-  public::writeTime
-  public::writeData
+  public::writeRestart_fortran
+  private::writeParam
+  private::writeTime
+  private::writeData
   private::writeForcTime
   private::writeScalar
   private::writeVector
+  private::writeRestart
 
-  ! define dimension lengths
-  integer(i4b),parameter      :: maxSpectral=2              ! maximum number of spectral bands
   contains
 
 ! **********************************************************************************************************
-! public subroutine writeParm: write model parameters
+! public subroutine writeOutput_fortran: write model output to file
 ! **********************************************************************************************************
 subroutine writeOutput_fortran(handle_ncid, num_steps, start_gru, max_gru, &
     write_parm_flag, err, message_r) bind(C, name="writeOutput_fortran")
-  USE var_lookup,only:maxVarFreq                               ! # of available output frequencies
+  USE var_lookup,only:maxvarFreq                               ! # of available output frequencies
   USE globalData,only:structInfo
   USE globalData,only:bvarChild_map,forcChild_map,progChild_map,diagChild_map,fluxChild_map,indxChild_map             ! index of the child data structure: stats bvar
   USE globalData,only:attr_meta,bvar_meta,type_meta,time_meta,forc_meta,prog_meta,diag_meta,flux_meta,indx_meta,bpar_meta,mpar_meta
-  USE globalData,only:maxLayers
   USE C_interface_module,only:f_c_string_ptr
   implicit none
   ! dummy variables
@@ -107,8 +111,8 @@ subroutine writeOutput_fortran(handle_ncid, num_steps, start_gru, max_gru, &
   integer(i4b)                         :: iStep             ! loop through time steps
   integer(i4b)                         :: iFreq             ! loop through output frequencies
   integer(i4b)                         :: indxHRU=1         ! index of HRU to write
-  integer(i4b), dimension(maxVarFreq)  :: outputTimestepUpdate
-  integer(i4b), dimension(maxVarFreq)  :: stepCounter
+  integer(i4b), dimension(maxvarFreq)  :: outputTimestepUpdate
+  integer(i4b), dimension(maxvarFreq)  :: stepCounter
   character(LEN=256)                   :: message = ""
   character(LEN=256)                   :: cmessage
   integer(i4b)                         :: iStruct
@@ -117,7 +121,6 @@ subroutine writeOutput_fortran(handle_ncid, num_steps, start_gru, max_gru, &
   ! Change the C pointer to a fortran pointer
   call c_f_pointer(handle_ncid, ncid)
   call f_c_string_ptr(trim(message), message_r)
-  ! print*, 'write Output', num_steps, start_gru, max_gru
   
   ! Write the Parameters if first write
   if (write_parm_flag)then
@@ -125,31 +128,34 @@ subroutine writeOutput_fortran(handle_ncid, num_steps, start_gru, max_gru, &
       do iGRU=start_gru, max_gru
         do iHRU=1,size(gru_struc(iGRU)%hruInfo)
           select case(trim(structInfo(iStruct)%structName))
-          case('attr'); call writeParm(ncid,gru_struc(iGRU)%hruInfo(iHRU)%hru_ix, &
-            summa_struct(1)%attrStruct%gru(iGRU)%hru(iHRU),attr_meta,err,cmessage)
-          case('type'); call writeParm(ncid,gru_struc(iGRU)%hruInfo(iHRU)%hru_ix, &
-            summa_struct(1)%typeStruct%gru(iGRU)%hru(iHRU),type_meta,err,cmessage)
-          case('mpar'); call writeParm(ncid,gru_struc(iGRU)%hruInfo(iHRU)%hru_ix, &
-            summa_struct(1)%mparStruct%gru(iGRU)%hru(iHRU),mpar_meta,err,cmessage)
+            case('attr'); call writeParam(ncid,gru_struc(iGRU)%hruInfo(iHRU)%hru_ix, &
+              summa_struct(1)%attrStruct%gru(iGRU)%hru(iHRU),attr_meta,err,cmessage)
+            case('type'); call writeParam(ncid,gru_struc(iGRU)%hruInfo(iHRU)%hru_ix, &
+              summa_struct(1)%typeStruct%gru(iGRU)%hru(iHRU),type_meta,err,cmessage)
+            case('mpar'); call writeParam(ncid,gru_struc(iGRU)%hruInfo(iHRU)%hru_ix, &
+              summa_struct(1)%mparStruct%gru(iGRU)%hru(iHRU),mpar_meta,err,cmessage)
           end select
           if(err/=0)then 
             message=trim(message)//trim(cmessage)//'['//trim(structInfo(iStruct)%structName)//']'
             call f_c_string_ptr(trim(message), message_r)
             return 
           endif
-          call writeParm(ncid,iGRU,summa_struct(1)%bparStruct%gru(iGRU),bpar_meta,err,cmessage)
-          if(err/=0)then
-            message=trim(message)//trim(cmessage)//'['//trim(structInfo(iStruct)%structName)//']' 
-            call f_c_string_ptr(trim(message), message_r)
-            return 
-          endif
         end do ! HRU
+        select case(trim(structInfo(iStruct)%structName))
+          case('bpar'); call writeParam(ncid,iGRU,&
+            summa_struct(1)%bparStruct%gru(iGRU),bpar_meta,err,cmessage)
+        end select
+        if(err/=0)then
+          message=trim(message)//trim(cmessage)//'['//trim(structInfo(iStruct)%structName)//']' 
+          call f_c_string_ptr(trim(message), message_r)
+          return 
+        endif
       end do ! GRU
     end do ! structInfo
   end if
   
   ! ****************************************************************************
-  ! *** write basin data
+  ! *** write time, SUMMA buffered write option turned off as Actors handles buffering
   ! ****************************************************************************
   do iGRU=start_gru, max_gru
     stepCounter(:) = outputTimeStep(iGRU)%dat(:) ! We want to avoid updating outputTimeStep
@@ -165,51 +171,41 @@ subroutine writeOutput_fortran(handle_ncid, num_steps, start_gru, max_gru, &
     end do ! istep
   end do ! iGRU
 
-
-  numGRU = max_gru-start_gru + 1
-  ! ****************************************************************************
-  ! *** write basin data
-  ! ****************************************************************************
-  call writeBasin(ncid,outputTimeStep(start_gru)%dat(:),outputTimeStepUpdate,num_steps,&
-                  start_gru, max_gru, numGRU, bvar_meta, &
-                  summa_struct(1)%bvarStat,summa_struct(1)%bvarStruct, &
-                  bvarChild_map,err,cmessage)
-  if(err/=0)then
-    message=trim(message)//trim(cmessage)//'[bvar]' 
-    call f_c_string_ptr(trim(message), message_r)
-    return 
-  endif
-
   ! ****************************************************************************
   ! *** write data
   ! ****************************************************************************
   do iStruct=1,size(structInfo)
     select case(trim(structInfo(iStruct)%structName))
       case('forc')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,maxLayers,num_steps,&
+        call writeData(ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,num_steps,&
                         start_gru, max_gru, numGRU, & 
                         forc_meta,summa_struct(1)%forcStat,summa_struct(1)%forcStruct,'forc', &
                         forcChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('prog')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,maxLayers,num_steps,&
+        call writeData(ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,num_steps,&
                         start_gru, max_gru, numGRU, &
                         prog_meta,summa_struct(1)%progStat,summa_struct(1)%progStruct,'prog', &
                         progChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('diag')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,maxLayers,num_steps,&
+        call writeData(ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,num_steps,&
                         start_gru, max_gru, numGRU, &
                         diag_meta,summa_struct(1)%diagStat,summa_struct(1)%diagStruct,'diag', &
                         diagChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('flux')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,maxLayers,num_steps,&
+        call writeData(ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,num_steps,&
                         start_gru, max_gru, numGRU, &
                         flux_meta,summa_struct(1)%fluxStat,summa_struct(1)%fluxStruct,'flux', &
                         fluxChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('indx')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,maxLayers,num_steps,&
+        call writeData(ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,num_steps,&
                         start_gru, max_gru, numGRU, &
                         indx_meta,summa_struct(1)%indxStat,summa_struct(1)%indxStruct,'indx', &
                         indxChild_map,summa_struct(1)%indxStruct,err,cmessage)
+      case('bvar')
+        call writeData(ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,num_steps,&
+                        start_gru, max_gru, numGRU, &
+                        bvar_meta,summa_struct(1)%bvarStat,summa_struct(1)%bvarStruct,'bvar', &
+                        bvarChild_map,summa_struct(1)%indxStruct,err,cmessage)
     end select
     if(err/=0)then
       message=trim(message)//trim(cmessage)//'['//trim(structInfo(iStruct)%structName)//']'
@@ -218,25 +214,28 @@ subroutine writeOutput_fortran(handle_ncid, num_steps, start_gru, max_gru, &
     endif
   end do  ! (looping through structures)
 
+  ! *****************************************************************************
+  ! *** update counters
+  ! *****************************************************************************
 
+  ! increment output file timestep
   do iFreq = 1,maxvarFreq
     outputTimeStep(start_gru)%dat(iFreq) = outputTimeStep(start_gru)%dat(iFreq) + outputTimeStepUpdate(iFreq) 
-  end do ! ifreq
+  end do ! iFreq
+
 end subroutine writeOutput_fortran
 
-
+! **********************************************************************************************************
+! public subroutine writeRestart_fortran: write restart data to the output structure
+! **********************************************************************************************************
 subroutine writeRestart_fortran(handle_ncid,  start_gru, num_gru, checkpoint, year, month, day, hour, err) bind(C, name="writeRestart_fortran")
-  USE var_lookup,only:maxVarFreq                               ! # of available output frequencies
+  USE var_lookup,only:maxvarFreq                               ! # of available output frequencies
   USE globalData,only:structInfo
   USE globalData,only:bvarChild_map,forcChild_map,progChild_map,diagChild_map,fluxChild_map,indxChild_map             ! index of the child data structure: stats bvar
   USE globalData,only:attr_meta,bvar_meta,type_meta,time_meta,forc_meta,prog_meta,diag_meta,flux_meta,indx_meta,bpar_meta,mpar_meta
-  USE globalData,only:maxLayers                               ! maximum number of layers
-  USE globalData,only:maxSnowLayers                           ! maximum number of snow layers
-
   USE summaFileManager,only:OUTPUT_PATH,OUTPUT_PREFIX         ! define output file
   USE summaFileManager,only:STATE_PATH                        ! optional path to state output files (defaults to OUTPUT_PATH)
 
-  ! USE fileAccess_writeRestart,only:writeRestart_fortran
   implicit none
   ! dummy variables
   type(c_ptr),intent(in), value        :: handle_ncid       ! ncid of the output file
@@ -257,8 +256,8 @@ subroutine writeRestart_fortran(handle_ncid,  start_gru, num_gru, checkpoint, ye
   integer(i4b)                         :: iStep             ! loop through time steps
   integer(i4b)                         :: iFreq             ! loop through output frequencies
   integer(i4b)                         :: indxHRU=1         ! index of HRU to write
-  integer(i4b), dimension(maxVarFreq)  :: outputTimestepUpdate
-  integer(i4b), dimension(maxVarFreq)  :: stepCounter
+  integer(i4b), dimension(maxvarFreq)  :: outputTimestepUpdate
+  integer(i4b), dimension(maxvarFreq)  :: stepCounter
   character(LEN=256)                   :: message
   character(LEN=256)                   :: cmessage
   
@@ -293,13 +292,11 @@ subroutine writeRestart_fortran(handle_ncid,  start_gru, num_gru, checkpoint, ye
                       num_gru,                       &  ! nHRU
                       checkpoint,                    &  ! checkpoint
                       prog_meta,                     &  ! prog_meta
-                      summa_struct(1)%progStruct, &  ! prog_data
+                      summa_struct(1)%progStruct,    &  ! prog_data
                       bvar_meta,                     &  ! bvar_meta
-                      summa_struct(1)%bvarStruct, &  ! bvar_data
-                      maxLayers,                     &  ! maxLayers
-                      maxSnowLayers,                 &  ! maxSnowLayers
+                      summa_struct(1)%bvarStruct,    &  ! bvar_data
                       indx_meta,                     &  ! indx_meta
-                      summa_struct(1)%indxStruct, &  ! indx_data
+                      summa_struct(1)%indxStruct,    &  ! indx_data
                       err,                           &  ! err
                       cmessage)                         ! message 
     if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
@@ -309,77 +306,62 @@ end subroutine writeRestart_fortran
 
 
 ! **********************************************************************************************************
-! public subroutine writeParm: write model parameters
+! private subroutine writeParam: write model parameters
 ! **********************************************************************************************************
-subroutine writeParm(ncid,ispatial,struct,meta,err,message)
-  USE data_types,only:var_info                    ! metadata info
-  USE var_lookup,only:iLookStat                   ! index in statistics vector
-  USE var_lookup,only:iLookFreq                   ! index in vector of model output frequencies
-  USE globalData,only:outputTimeStep              ! vector of model output time steps
-  implicit none
+subroutine writeParam(ncid,iSpatial,struct,meta,err,message)
+ USE data_types,only:var_info                    ! metadata info
+ USE var_lookup,only:iLookStat                   ! index in statistics vector
+ USE var_lookup,only:iLookFreq                   ! index in vector of model output frequencies
+ implicit none
 
-  ! declare input variables
-  type(var_i)   ,intent(in)   :: ncid             ! file ids
-  integer(i4b)  ,intent(in)   :: iSpatial         ! hydrologic response unit
-  class(*)      ,intent(in)   :: struct           ! data structure
-  type(var_info),intent(in)   :: meta(:)          ! metadata structure
-  integer(i4b)  ,intent(out)  :: err              ! error code
-  character(*)  ,intent(out)  :: message          ! error message
-  ! local variables
-  integer(i4b)                :: iVar             ! loop through variables
+ ! declare input variables
+ type(var_i)   ,intent(in)   :: ncid             ! file ids
+ integer(i4b)  ,intent(in)   :: iSpatial         ! hydrologic response unit
+ class(*)      ,intent(in)   :: struct           ! data structure
+ type(var_info),intent(in)   :: meta(:)          ! metadata structure
+ integer(i4b)  ,intent(out)  :: err              ! error code
+ character(*)  ,intent(out)  :: message          ! error message
+ ! local variables
+ integer(i4b)                :: iVar             ! loop through variables
 
-  ! initialize error control
-  err=0;message="writeParm/"
-  ! loop through local column model parameters
-  do iVar = 1,size(meta)
+ ! initialize error control
+ err=0;message="writeParam/"
+ ! loop through local column model parameters
+ do iVar = 1,size(meta)
 
-    ! check that the variable is desired
-    if (meta(iVar)%statIndex(iLookFREQ%timestep)==integerMissing) cycle
+  ! check that the variable is desired
+  if (meta(iVar)%statIndex(iLookFREQ%timestep)==integerMissing) cycle
 
-    ! initialize message
-    message=trim(message)//trim(meta(iVar)%varName)//'/'
+  ! initialize message
+  message=trim(message)//trim(meta(iVar)%varName)//':'
 
-    ! HRU data
-    if (iSpatial/=integerMissing) then
-      select type (struct)
-        class is (var_i)
-          err = nf90_put_var(ncid%var(iLookFreq%timestep),meta(iVar)%ncVarID(iLookFreq%timestep),(/struct%var(iVar)/),start=(/iSpatial/),count=(/1/))
-        class is (var_i8)
-          err = nf90_put_var(ncid%var(iLookFreq%timestep),meta(iVar)%ncVarID(iLookFreq%timestep),(/struct%var(iVar)/),start=(/iSpatial/),count=(/1/))
-        class is (var_d)
-          err = nf90_put_var(ncid%var(iLookFreq%timestep),meta(iVar)%ncVarID(iLookFreq%timestep),(/struct%var(iVar)/),start=(/iSpatial/),count=(/1/))
-        class is (var_dlength)
-          err = nf90_put_var(ncid%var(iLookFreq%timestep),meta(iVar)%ncVarID(iLookFreq%timestep),(/struct%var(iVar)%dat/),start=(/iSpatial,1/),count=(/1,size(struct%var(iVar)%dat)/))
-        class default; err=20; message=trim(message)//'unknown variable type (with HRU)'; return
-      end select
-      call netcdf_err(err,message); if (err/=0) return
+  select type (struct)
+   class is (var_i)
+    err = nf90_put_var(ncid(iLookFREQ%timestep),meta(iVar)%ncVarID(iLookFREQ%timestep),(/struct%var(iVar)/),start=(/iSpatial/),count=(/1/))
+   class is (var_i8)
+    err = nf90_put_var(ncid(iLookFREQ%timestep),meta(iVar)%ncVarID(iLookFREQ%timestep),(/struct%var(iVar)/),start=(/iSpatial/),count=(/1/))
+   class is (var_d)
+    err = nf90_put_var(ncid(iLookFREQ%timestep),meta(iVar)%ncVarID(iLookFREQ%timestep),(/struct%var(iVar)/),start=(/iSpatial/),count=(/1/))
+   class is (var_dlength)
+    err = nf90_put_var(ncid(iLookFREQ%timestep),meta(iVar)%ncVarID(iLookFREQ%timestep),(/struct%var(iVar)%dat/),start=(/iSpatial,1/),count=(/1,size(struct%var(iVar)%dat)/))
+   class default; err=20; message=trim(message)//'parameter type must be var_i, var_i8, var_d, or var_dlength'; return
+  end select
+  call netcdf_err(err,message); if (err/=0) return
 
-      ! GRU data
-    else
-      select type (struct)
-        class is (var_d)
-          err = nf90_put_var(ncid%var(iLookFreq%timestep),meta(iVar)%ncVarID(iLookFreq%timestep),(/struct%var(iVar)/),start=(/1/),count=(/1/))
-        class is (var_i8)
-          err = nf90_put_var(ncid%var(iLookFreq%timestep),meta(iVar)%ncVarID(iLookFreq%timestep),(/struct%var(iVar)/),start=(/1/),count=(/1/))
-        class default; err=20; message=trim(message)//'unknown variable type (no HRU)'; return
-      end select
-    end if
-    call netcdf_err(err,message); if (err/=0) return
+  ! re-initialize message
+  message="writeParam/"
+ end do  ! looping through local column model parameters
 
-    ! re-initialize message
-    message="writeParm/"
-  end do  ! looping through local column model parameters
-
-end subroutine writeParm
+end subroutine writeParam
 
 ! **************************************************************************************
 ! public subroutine writeData: write model time-dependent data
 ! **************************************************************************************
-subroutine writeData(ncid,outputTimestep,outputTimestepUpdate,maxLayers,nSteps, &
+subroutine writeData(ncid,outputTimestep,outputTimestepUpdate,nSteps, &
             minGRU, maxGRU, numGRU, & 
             meta,stat,dat,structName,map,indx,err,message)
   USE data_types,only:var_info                       ! metadata type
-  USE var_lookup,only:maxVarStat                     ! index into stats structure
+  USE var_lookup,only:maxvarStat                     ! index into stats structure
   USE var_lookup,only:iLookVarType                   ! index into type structure
   USE var_lookup,only:iLookIndex                     ! index into index structure
   USE var_lookup,only:iLookStat                      ! index into stat structure
@@ -392,7 +374,6 @@ subroutine writeData(ncid,outputTimestep,outputTimestepUpdate,maxLayers,nSteps, 
   type(var_i)   ,intent(in)        :: ncid              ! file ids
   integer(i4b)  ,intent(inout)     :: outputTimestep(:) ! output time step
   integer(i4b)  ,intent(inout)     :: outputTimestepUpdate(:) ! number of HRUs in the run domain
-  integer(i4b)  ,intent(in)        :: maxLayers         ! maximum number of layers
   integer(i4b)  ,intent(in)        :: nSteps            ! number of timeSteps
   integer(i4b)  ,intent(in)        :: minGRU            ! minGRU index to write
   integer(i4b)  ,intent(in)        :: maxGRU            ! maxGRU index to write - probably not needed
@@ -470,7 +451,9 @@ subroutine writeData(ncid,outputTimestep,outputTimestepUpdate,maxLayers,nSteps, 
 
 end subroutine writeData
 
-! Write the time var from the forcStruct
+! **********************************************************************************************************
+! private subroutine writeForcTime: Write the time var from the forcStruct
+! **********************************************************************************************************
 subroutine writeForcTime(ncid, minGRU, maxGRU, outputTimestep, &
     outputTimestepUpdate, nSteps, iFreq, iVar, meta, err, message)
   USE data_types,only:var_info ! metadata type
@@ -521,8 +504,12 @@ subroutine writeForcTime(ncid, minGRU, maxGRU, outputTimestep, &
   call netcdf_err(err,message); if (err/=0)then; return; endif
   ! save the value of the number of steps to update outputTimestep at the end of the function
   outputTimeStepUpdate(iFreq) = stepCounter
+
 end subroutine writeForcTime
 
+! **********************************************************************************************************
+! private subroutine writeScalar: write scalar variables from data structures 
+! **********************************************************************************************************
 subroutine writeScalar(ncid, outputTimestep, outputTimestepUpdate, nSteps, minGRU, maxGRU, &
   nHRUrun, iFreq, iVar, meta, stat, map, err, message)
   USE data_types,only:var_info                       ! metadata type
@@ -608,6 +595,9 @@ subroutine writeScalar(ncid, outputTimestep, outputTimestepUpdate, nSteps, minGR
 
 end subroutine
 
+! **********************************************************************************************************
+! private subroutine writeVector: write vector variables from data structures 
+! **********************************************************************************************************
 subroutine writeVector(ncid, outputTimestep, maxLayers, nSteps, minGRU, maxGRU, &
   nHRUrun, iFreq, iVar, meta, dat, indx, err, message)
   USE data_types,only:var_info                       ! metadata type
@@ -720,105 +710,8 @@ subroutine writeVector(ncid, outputTimestep, maxLayers, nSteps, minGRU, maxGRU, 
     end select ! data type
     stepCounter = stepCounter + 1
   end do ! iStep
-end subroutine
 
-! **************************************************************************************
-! public subroutine writeBasin: write basin-average variables
-! **************************************************************************************
-subroutine writeBasin(ncid,outputTimestep,outputTimestepUpdate,nSteps,&
-                      minGRU, maxGRU, numGRU, &
-                      meta,stat,dat,map,err,message)
-  USE data_types,only:var_info                       ! metadata type
-  USE var_lookup,only:maxVarStat                     ! index into stats structure
-  USE var_lookup,only:iLookVarType                   ! index into type structure
-  USE globalData,only:outFreq                        ! output file information
-  USE get_ixName_module,only:get_varTypeName         ! to access type strings for error messages
-  USE get_ixName_module,only:get_statName            ! to access type strings for error messages
-  implicit none
-
-  ! declare dummy variables
-  type(var_i)   ,intent(in)     :: ncid              ! file ids
-  integer(i4b)  ,intent(inout)  :: outputTimestep(:) ! output time step
-  integer(i4b)  ,intent(inout)  :: outputTimestepUpdate(:) ! number of HRUs in the run domain
-  integer(i4b)  ,intent(in)     :: nSteps            ! number of timeSteps
-  integer(i4b)  ,intent(in)     :: minGRU            ! minGRU index to write
-  integer(i4b)  ,intent(in)     :: maxGRU            ! maxGRU index to write - probably not needed
-  integer(i4b)  ,intent(in)     :: numGRU            ! number of GRUs to write
-  type(var_info),intent(in)     :: meta(:)           ! meta data
-  class(*)      ,intent(in)     :: stat              ! stats data
-  class(*)      ,intent(in)     :: dat               ! timestep data
-  integer(i4b)  ,intent(in)     :: map(:)            ! map into stats child struct
-  integer(i4b)  ,intent(out)    :: err               ! error code
-  character(*)  ,intent(out)    :: message           ! error message
-  ! local variables
-  integer(i4b)                  :: iVar              ! variable index
-  integer(i4b)                  :: iStat             ! statistics index
-  integer(i4b)                  :: iFreq             ! frequency index
-  integer(i4b)                  :: step_counter
-  integer(i4b)                  :: gru_counter
-  integer(i4b)                  :: iGRU, iStep
-  real(rkind)                   :: realVec(numGRU, nSteps)  ! real vector for all HRUs in the run domain
-
-  ! initialize error control
-  err=0;message="f-writeBasin/"
-
-  ! initialize realVec array
-  realVec = realMissing
-
-  ! loop through output frequencies
-  do iFreq=1,maxvarFreq
-    ! skip frequencies that are not needed
-    if(.not.outFreq(iFreq)) cycle
-    ! loop through model variables
-    do iVar = 1,size(meta)
-      ! define the statistics index
-      iStat = meta(iVar)%statIndex(iFreq)
-      ! check that the variable is desired
-      if (iStat==integerMissing.or.trim(meta(iVar)%varName)=='unknown') cycle
-      select case (meta(iVar)%varType)
-        case (iLookVarType%scalarv)
-          select type (stat)
-            class is (gru_hru_time_doubleVec)
-              gru_counter = 0
-              do iGRU = minGRU, maxGRU
-                step_counter = 0
-                gru_counter = gru_counter + 1
-                do iStep = 1, nSteps
-                  step_counter = step_counter + 1
-                  if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(1)%tim(iStep)%dat(iFreq)) cycle
-                  realVec(gru_counter, step_counter) = stat%gru(iGRU)%hru(1)%var(map(iVar))%tim(iStep)%dat(iFreq)
-                  outputTimeStepUpdate(iFreq) = step_counter
-                end do ! iStep
-              end do ! iGRU
-              err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq),  &
-                                 realVec(1:numGRU,1:step_counter),           &
-                                 start=(/minGRU,outputTimestep(iFreq)/),     & 
-                                 count=(/numGRU,step_counter/))
-            class default; err=20; message=trim(message)//'stats must be scalarv and of type gru_hru_doubleVec'; return
-          end select ! stat
-        case (iLookVarType%routing)
-          select type (dat)
-            class is (gru_hru_time_doubleVec)
-              if (iFreq==1 .and. outputTimestep(iFreq)==1) then
-                do iGRU = minGRU, maxGRU
-                  err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq),&
-                                     dat%gru(iGRU)%hru(1)%var(iVar)%tim(1)%dat,&
-                                     start=(/1/), count=(/1000/))
-                end do
-              end if
-            class default; err=20; message=trim(message)//'data must not be scalarv and either of type gru_hru_doubleVec or gru_hru_intVec'; return
-          end select
-        case default
-          err=40; message=trim(message)//"unknownVariableType[name='"//trim(meta(iVar)%varName)//"';type='"//trim(get_varTypeName(meta(iVar)%varType))//    "']"; return
-      end select ! variable type
-
-      ! process error code
-      if (err.ne.0) message=trim(message)//trim(meta(iVar)%varName)//'_'//trim(get_statName(iStat))
-      call netcdf_err(err,message); if (err/=0) return
-    end do ! iVar
-  end do ! iFreq
-
-end subroutine writeBasin
+end subroutine writeVector
 
 ! **************************************************************************************
 ! public subroutine writeTime: write current time to all files
@@ -853,32 +746,34 @@ subroutine writeTime(ncid,outputTimestep,iStep,meta,dat,err,message)
 
       ! check instantaneous
       if (meta(iVar)%statIndex(iFreq)/=iLookStat%inst) cycle
+
       ! get variable id in file
       err = nf90_inq_varid(ncid%var(iFreq),trim(meta(iVar)%varName),ncVarID)
-      if (err/=0) message=trim(message)//trim(meta(iVar)%varName); call netcdf_err(err,message)
+      if (err/=0) message=trim(message)//trim(meta(iVar)%varName)
+      call netcdf_err(err,message)
       if (err/=0) then; err=20; return; end if
 
       ! add to file
       err = nf90_put_var(ncid%var(iFreq),ncVarID,(/dat(iVar)%tim(iStep)/),start=(/outputTimestep(iFreq)/),count=(/1/))
-      if (err/=0) message=trim(message)//trim(meta(iVar)%varName);call netcdf_err(err,message)
+      if (err/=0) message=trim(message)//trim(meta(iVar)%varName)
+      call netcdf_err(err,message)
       if (err/=0) then; err=20; return; end if
 
     end do ! iVar
   end do ! iFreq
+
 end subroutine writeTime   
 
+! *********************************************************************************************************
+! public subroutine writeRestart: print a re-start file
+! *********************************************************************************************************
 subroutine writeRestart(filename,          & ! intent(in): name of restart file
-  ! minGRU, &
-  ! maxGRU, &
-  ! nGRU,             & ! intent(in): number of GRUs
   nGRU,             & ! intent(in): number of HRUs
-  checkpoint, &
+  checkpoint,       &
   prog_meta,        & ! intent(in): prognostics metadata
   prog_data,        & ! intent(in): prognostics data
   bvar_meta,        & ! intent(in): basin (gru) variable metadata
   bvar_data,        & ! intent(in): basin (gru) variable data
-  maxLayers,        & ! intent(in): maximum number of layers
-  maxSnowLayers,    & ! intent(in): maximum number of snow layers
   indx_meta,        & ! intent(in): index metadata
   indx_data,        & ! intent(in): index data
   err,message)        ! intent(out): error control
@@ -900,25 +795,20 @@ USE globalData,only:nTimeDelay             ! number of timesteps in the time del
 implicit none
 ! --------------------------------------------------------------------------------------------------------
 ! input
-character(len=256),intent(in)      :: filename      ! name of the restart file
-integer(i4b),intent(in)            :: nGRU          ! number of GRUs
-!  integer(i4b),intent(in)            :: nHRU          ! number of HRUs
-!  integer(i4b)  ,intent(in)        :: minGRU            ! minGRU index to write
-!  integer(i4b)  ,intent(in)        :: maxGRU            ! maxGRU index to write - probably not needed
-integer(i4b),intent(in)            :: checkpoint      ! checkpoint the restart file is based on
-type(var_info),intent(in)          :: prog_meta(:)  ! prognostic variable metadata
+character(len=256),intent(in)           :: filename      ! name of the restart file
+integer(i4b),intent(in)                 :: nGRU          ! number of GRUs
+integer(i4b),intent(in)                 :: checkpoint    ! checkpoint the restart file is based on
+type(var_info),intent(in)               :: prog_meta(:)  ! prognostic variable metadata
 type(gru_hru_time_doubleVec),intent(in) :: prog_data     ! prognostic vars
-type(var_info),intent(in)          :: bvar_meta(:)  ! basin variable metadata
-type(gru_hru_time_doubleVec),intent(in)     :: bvar_data     ! basin variables
-type(var_info),intent(in)          :: indx_meta(:)  ! metadata
+type(var_info),intent(in)               :: bvar_meta(:)  ! basin variable metadata
+type(gru_hru_time_doubleVec),intent(in) :: bvar_data     ! basin variables
+type(var_info),intent(in)               :: indx_meta(:)  ! metadata
 type(gru_hru_time_intVec),intent(in)    :: indx_data     ! indexing vars
 ! output: error control
-integer(i4b),intent(out)           :: err           ! error code
-character(*),intent(out)           :: message       ! error message
+integer(i4b),intent(out)                :: err           ! error code
+character(*),intent(out)                :: message       ! error message
 ! --------------------------------------------------------------------------------------------------------
 ! dummy variables
-integer(i4b), intent(in)           :: maxLayers     ! maximum number of total layers
-integer(i4b), intent(in)           :: maxSnowLayers ! maximum number of snow layers
 
 ! local variables
 integer(i4b)                       :: ncid          ! netcdf file id
@@ -1070,18 +960,6 @@ nLayers = nSoil + nSnow
 ! check size
 ! NOTE: this may take time that we do not wish to use
 okLength=.true.
-
-! select case (prog_meta(iVar)%varType) ! should this be prog_meta?
-! case(iLookVarType%scalarv);              okLength = (size(prog_data%gru(iGRU)%hru(iHRU)%var(iVar)%tim(checkpoint)%dat) == nScalar  )
-! case(iLookVarType%wlength);              okLength = (size(prog_data%gru(iGRU)%hru(iHRU)%var(iVar)%tim(checkpoint)%dat) == nSpectral)
-! case(iLookVarType%midSoil);              okLength = (size(prog_data%gru(iGRU)%hru(iHRU)%var(iVar)%tim(checkpoint)%dat) == nSoil    )
-! case(iLookVarType%midToto);              okLength = (size(prog_data%gru(iGRU)%hru(iHRU)%var(iVar)%tim(checkpoint)%dat) == nLayers  )
-! case(iLookVarType%ifcSoil);              okLength = (size(prog_data%gru(iGRU)%hru(iHRU)%var(iVar)%tim(checkpoint)%dat) == nSoil+1  )
-! case(iLookVarType%ifcToto);              okLength = (size(prog_data%gru(iGRU)%hru(iHRU)%var(iVar)%tim(checkpoint)%dat) == nLayers+1)
-! case(iLookVarType%midSnow); if (nSnow>0) okLength = (size(prog_data%gru(iGRU)%hru(iHRU)%var(iVar)%tim(checkpoint)%dat) == nSnow    )
-! case(iLookVarType%ifcSnow); if (nSnow>0) okLength = (size(prog_data%gru(iGRU)%hru(iHRU)%var(iVar)%tim(checkpoint)%dat) == nSnow+1  )
-! case default; err=20; message=trim(message)//'unknown var type'; return
-! end select
 
 ! error check
 if(.not.okLength)then

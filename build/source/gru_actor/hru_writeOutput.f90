@@ -66,7 +66,6 @@ USE output_buffer,only:summa_struct
 
 
 implicit none
-private
 public::writeHRUOutput
 public::hru_writeRestart
 public::writeRestart
