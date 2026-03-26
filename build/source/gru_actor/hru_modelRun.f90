@@ -77,19 +77,16 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
   ! * desired modules
   ! ---------------------------------------------------------------------------------------
   ! data types
-  USE nr_type                                   ! variable types, etc.
+  USE nr_type                                  ! variable types, etc.
   ! subroutines and functions
   USE vegPhenlgy_module,only:vegPhenlgy        ! module to compute vegetation phenology
-  USE time_utils_module,only:elapsedSec        ! calculate the elapsed time
   USE module_sf_noahmplsm,only:redprm          ! module to assign more Noah-MP parameters
   USE derivforce_module,only:derivforce        ! module to compute derived forcing data
   USE coupled_em_module,only:coupled_em        ! module to run the coupled energy and mass model
-  USE qTimeDelay_module,only:qOverland         ! module to route water through an "unresolved" river network
   ! global data
   USE globalData,only:gru_struc
   USE globalData,only:model_decisions          ! model decision structure
-  USE globalData,only:startPhysics,endPhysics  ! date/time for the start and end of the initialization
-  USE globalData,only:elapsedPhysics           ! elapsed time for the initialization
+
   implicit none
   ! Dummy Variables
   integer(c_int),intent(in)                 :: indxGRU                ! id of GRU
@@ -106,9 +103,6 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
   logical(lgt)                              :: computeVegFluxFlag     ! flag to indicate if we are computing fluxes over vegetation (.false. means veg is buried with snow)
   real(dp)                                  :: notUsed_canopyDepth    ! NOT USED: canopy depth (m)
   real(dp)                                  :: notUsed_exposedVAI     ! NOT USED: exposed vegetation area index (m2 m-2)
-  integer(i4b)                              :: nSnow                  ! number of snow layers
-  integer(i4b)                              :: nSoil                  ! number of soil layers
-  integer(i4b)                              :: nLayers                ! total number of layers
   ! ---------------------------------------------------------------------------------------
   hruId = gru_struc(indxGRU)%hruInfo(indxHRU)%hru_id
 
@@ -153,10 +147,6 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
   ! ****************************************************************************
   ! *** model simulation
   ! ****************************************************************************
-  ! update the number of layers
-  nSnow   = hru_data%indxStruct%var(iLookINDEX%nSnow)%dat(1)    ! number of snow layers
-  nSoil   = hru_data%indxStruct%var(iLookINDEX%nSoil)%dat(1)    ! number of soil layers
-  nLayers = hru_data%indxStruct%var(iLookINDEX%nLayers)%dat(1)  ! total number of layers
   
   computeVegFluxFlag = (hru_data%ComputeVegFlux == yes)
 
@@ -179,10 +169,9 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
   call REDPRM(hru_data%typeStruct%var(iLookTYPE%vegTypeIndex),      & ! vegetation type index
               hru_data%typeStruct%var(iLookTYPE%soilTypeIndex),     & ! soil type
               hru_data%typeStruct%var(iLookTYPE%slopeTypeIndex),    & ! slope type index
-              maxSoilLayers,                               & ! number of soil layers
-              urbanVegCategory)                              ! vegetation category for urban areas
+              10000_i4b,                                            & ! number of soil layers
+              urbanVegCategory)                                       ! vegetation category for urban areas
  
-
   ! overwrite the minimum resistance
   if(overwriteRSMIN) RSMIN = hru_data%mparStruct%var(iLookPARAM%minStomatalResistance)%dat(1)
   
@@ -237,6 +226,9 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
   flush(6)
   return; endif;
 
+  ! update the number of layers
+  gru_struc(indxGRU)%hruInfo%nSnow   = hru_data%indxStruct%var(iLookINDEX%nSnow)%dat(1)     ! number of snow layers
+  gru_struc(indxGRU)%hruInfo%nSoil   = hru_data%indxStruct%var(iLookINDEX%nSoil)%dat(1)     ! number of soil layers
 
   !************************************* End of run_oneHRU *****************************************
   ! save the flag for computing the vegetation fluxes

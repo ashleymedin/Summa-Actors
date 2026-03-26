@@ -32,7 +32,7 @@ subroutine f_readDimension(start_gru, num_gru, file_gru, file_hru, &
   USE netcdf_util_module,only:nc_file_open                   ! open netcdf file
   USE netcdf_util_module,only:nc_file_close                  ! close netcdf file
 
-  USE globalData,only:gru_struc                             ! gru->hru mapping structure
+  USE globalData,only:gru_struc                              ! gru->hru mapping structure
   USE globalData,only:index_map                              ! hru->gru mapping structure
   USE nr_utils_module,only:arth
 
@@ -216,8 +216,5 @@ subroutine f_deallocateGruStruc() bind(C, name="f_deallocateGruStruc")
     if(allocated(hru2gru_id))then; deallocate(hru2gru_id);endif
     if(allocated(hru_ix))then; deallocate(hru_ix);endif
 end subroutine
-
-
-
 
 end module gru_struc_module

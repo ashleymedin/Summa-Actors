@@ -19,7 +19,7 @@ USE globalData,only:statFlux_meta                           ! child metadata for
 USE globalData,only:statIndx_meta                           ! child metadata for stats
 USE globalData,only:statBvar_meta                           ! child metadata for stats
 ! maxvarFreq 
-USE var_lookup,only:maxVarFreq                               ! # of available output frequencies
+USE var_lookup,only:maxvarFreq                               ! # of available output frequencies
 ! named variables
 USE var_lookup,only:iLookATTR                               ! look-up values for local attributes
 USE var_lookup,only:iLookTYPE                               ! look-up values for classification of veg, soils etc.
@@ -45,7 +45,7 @@ subroutine initHRU(indx_gru, indx_hru, hru_data, err, message)
   ! * desired modules
   ! ---------------------------------------------------------------------------------------
   ! data types
-  USE nr_type                                                  ! variable types, etc.
+  USE nr_type                                                 ! variable types, etc.
   ! subroutines and functions: allocate space
   USE allocspace_module,only:allocLocal
   ! timing variables
@@ -99,7 +99,6 @@ subroutine initHRU(indx_gru, indx_hru, hru_data, err, message)
   hru_data%finishTime_hru%var(:) = finshTime%var(:)
   hru_data%refTime_hru%var(:) = refTime%var(:)
   hru_data%oldTime_hru%var(:) = oldTime%var(:)
-
 
   ! get the number of snow and soil layers
   associate(&
@@ -163,12 +162,12 @@ subroutine initHRU(indx_gru, indx_hru, hru_data, err, message)
   end do ! iStruct
 
   ! Intilaize the statistics data structures
-  allocate(hru_data%statCounter%var(maxVarFreq), stat=err)
-  allocate(hru_data%outputTimeStep%var(maxVarFreq), stat=err)
-  allocate(hru_data%resetStats%dat(maxVarFreq), stat=err)
-  allocate(hru_data%finalizeStats%dat(maxVarFreq), stat=err)
-  hru_data%statCounter%var(1:maxVarFreq) = 1
-  hru_data%outputTimeStep%var(1:maxVarFreq) = 1
+  allocate(hru_data%statCounter%var(maxvarFreq), stat=err)
+  allocate(hru_data%outputTimeStep%var(maxvarFreq), stat=err)
+  allocate(hru_data%resetStats%dat(maxvarFreq), stat=err)
+  allocate(hru_data%finalizeStats%dat(maxvarFreq), stat=err)
+  hru_data%statCounter%var(1:maxvarFreq) = 1
+  hru_data%outputTimeStep%var(1:maxvarFreq) = 1
   ! initialize flags to reset/finalize statistics
   hru_data%resetStats%dat(:)    = .true.   ! start by resetting statistics
   hru_data%finalizeStats%dat(:) = .false.  ! do not finalize stats on the first time step
@@ -207,7 +206,7 @@ subroutine setupHRU(indxGRU, indxHRU, hru_data, err, message)
 
   ! local variables
 
-  integer(i4b)                             :: ivar                 ! loop counter
+  integer(i4b)                             :: iVar                 ! loop counter
   integer(i4b)                             :: i_z                  ! loop counter
   character(len=256)                       :: cmessage             ! error message of downwind routine
 
@@ -223,8 +222,8 @@ subroutine setupHRU(indxGRU, indxHRU, hru_data, err, message)
   hru_data%mparStruct%var(:) = init_struc%mparStruct%gru(indxGRU)%hru(indxHRU)%var(:)
   hru_data%bparStruct%var(:) = init_struc%bparStruct%gru(indxGRU)%var(:)
   hru_data%dparStruct%var(:) = init_struc%dparStruct%gru(indxGRU)%hru(indxHRU)%var(:)
-  do ivar=1, size(init_struc%bvarStruct%gru(indxGRU)%var(:))
-    hru_data%bvarStruct%var(ivar)%dat(:) = init_struc%bvarStruct%gru(indxGRU)%var(ivar)%dat(:)
+  do iVar=1, size(init_struc%bvarStruct%gru(indxGRU)%var(:))
+    hru_data%bvarStruct%var(iVar)%dat(:) = init_struc%bvarStruct%gru(indxGRU)%var(iVar)%dat(:)
   enddo
   if (allocated(init_struc%lookupStruct%gru(indxGRU)%hru(indxHRU)%z)) then
     if (.not. allocated(hru_data%lookupStruct%z)) then
@@ -234,25 +233,25 @@ subroutine setupHRU(indxGRU, indxHRU, hru_data, err, message)
       if (.not. allocated(hru_data%lookupStruct%z(i_z)%var)) then
         allocate(hru_data%lookupStruct%z(i_z)%var(size(init_struc%lookupStruct%gru(indxGRU)%hru(indxHRU)%z(i_z)%var)))
       end if
-      do ivar = 1, size(init_struc%lookupStruct%gru(indxGRU)%hru(indxHRU)%z(i_z)%var(:))
-        if (.not. allocated(hru_data%lookupStruct%z(i_z)%var(ivar)%lookup)) then
-          allocate(hru_data%lookupStruct%z(i_z)%var(ivar)%lookup(size(init_struc%lookupStruct%gru(indxGRU)%hru(indxHRU)%z(i_z)%var(ivar)%lookup)))
+      do iVar = 1, size(init_struc%lookupStruct%gru(indxGRU)%hru(indxHRU)%z(i_z)%var(:))
+        if (.not. allocated(hru_data%lookupStruct%z(i_z)%var(iVar)%lookup)) then
+          allocate(hru_data%lookupStruct%z(i_z)%var(iVar)%lookup(size(init_struc%lookupStruct%gru(indxGRU)%hru(indxHRU)%z(i_z)%var(iVar)%lookup)))
         end if
-        hru_data%lookupStruct%z(i_z)%var(ivar)%lookup(:) = init_struc%lookupStruct%gru(indxGRU)%hru(indxHRU)%z(i_z)%var(ivar)%lookup(:)
+        hru_data%lookupStruct%z(i_z)%var(iVar)%lookup(:) = init_struc%lookupStruct%gru(indxGRU)%hru(indxHRU)%z(i_z)%var(iVar)%lookup(:)
       end do
     end do
   endif
-  do ivar=1, size(init_struc%progStruct%gru(indxGRU)%hru(indxHRU)%var(:))
-    hru_data%progStruct%var(ivar)%dat(:) = init_struc%progStruct%gru(indxGRU)%hru(indxHRU)%var(ivar)%dat(:)
+  do iVar=1, size(init_struc%progStruct%gru(indxGRU)%hru(indxHRU)%var(:))
+    hru_data%progStruct%var(iVar)%dat(:) = init_struc%progStruct%gru(indxGRU)%hru(indxHRU)%var(iVar)%dat(:)
   enddo
-  do ivar=1, size(init_struc%indxStruct%gru(indxGRU)%hru(indxHRU)%var(:))
-    hru_data%indxStruct%var(ivar)%dat(:) = init_struc%indxStruct%gru(indxGRU)%hru(indxHRU)%var(ivar)%dat(:)
+  do iVar=1, size(init_struc%indxStruct%gru(indxGRU)%hru(indxHRU)%var(:))
+    hru_data%indxStruct%var(iVar)%dat(:) = init_struc%indxStruct%gru(indxGRU)%hru(indxHRU)%var(iVar)%dat(:)
   enddo
-  do ivar=1, size(init_struc%diagStruct%gru(indxGRU)%hru(indxHRU)%var(:))
-    hru_data%diagStruct%var(ivar)%dat(:) = init_struc%diagStruct%gru(indxGRU)%hru(indxHRU)%var(ivar)%dat(:)
+  do iVar=1, size(init_struc%diagStruct%gru(indxGRU)%hru(indxHRU)%var(:))
+    hru_data%diagStruct%var(iVar)%dat(:) = init_struc%diagStruct%gru(indxGRU)%hru(indxHRU)%var(iVar)%dat(:)
   enddo
-  do ivar=1, size(init_struc%fluxStruct%gru(indxGRU)%hru(indxHRU)%var(:))
-    hru_data%fluxStruct%var(ivar)%dat(:) = init_struc%fluxStruct%gru(indxGRU)%hru(indxHRU)%var(ivar)%dat(:)
+  do iVar=1, size(init_struc%fluxStruct%gru(indxGRU)%hru(indxHRU)%var(:))
+    hru_data%fluxStruct%var(iVar)%dat(:) = init_struc%fluxStruct%gru(indxGRU)%hru(indxHRU)%var(iVar)%dat(:)
   enddo
 end subroutine setupHRU
 
@@ -261,7 +260,7 @@ end subroutine setupHRU
 ! public subroutine summa_readRestart: read restart data and reset the model state
 ! **************************************************************************************************
 subroutine readHRURestart(indxGRU, indxHRU, hru_data, err, message)
-  USE nr_type                                                  ! variable types, etc.
+  USE nr_type                                                 ! variable types, etc.
   ! functions and subroutines
   USE var_derive_module,only:calcHeight                       ! module to calculate height at layer interfaces and layer mid-point
   USE var_derive_module,only:v_shortcut                       ! module to calculate "short-cut" variables
@@ -287,7 +286,7 @@ subroutine readHRURestart(indxGRU, indxHRU, hru_data, err, message)
   integer(c_int), intent(out)             :: err
   character(len=256),intent(out)          :: message
   ! local variables
-  integer(i4b)                            :: ivar               ! index of variable
+  integer(i4b)                            :: iVar               ! index of variable
   character(LEN=256)                      :: cmessage           ! error message of downwind routine
   character(LEN=256)                      :: restartFile        ! restart file name
   integer(i4b)                            :: nGRU
