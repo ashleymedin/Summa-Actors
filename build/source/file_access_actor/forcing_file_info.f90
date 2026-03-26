@@ -217,7 +217,7 @@ subroutine read_forcingFile(iFile, startGRU, numGRU, err, message_r) &
     numHRU = sum(gru_struc(:)%hruCount)
     
 
-    err=nf90_get_var(ncid,forcFileInfo(iFile)%data_id(ivar), &
+    err=nf90_get_var(ncid,forcFileInfo(iFile)%data_id(iVar), &
                      forcingDataStruct(iFile)%var(iVar)%dataFromFile, &
                      start=(/ixHRUfile_min,1/),count=(/nHRUlocal, nTimeSteps/))
     if(err/=nf90_noerr)then; message=trim(message)//'problem reading forcing data: '//trim(varName)//'/'//trim(nf90_strerror(err)); call f_c_string_ptr(trim(message),message_r); return; endif

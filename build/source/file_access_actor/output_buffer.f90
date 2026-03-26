@@ -95,7 +95,7 @@ subroutine f_defOutput(handle_ncid, start_gru, num_gru, num_hru, file_gru, &
   if(err/=0)then; call f_c_string_ptr(trim(message), message_r); return; endif
   ! allocate space for the output file ID array
   if (.not.allocated(output_ncid%var))then
-    allocate(output_ncid%var(maxVarFreq))
+    allocate(output_ncid%var(maxvarFreq))
     output_ncid%var(:) = integerMissing
   endif
   ! copy ncid
@@ -182,7 +182,7 @@ subroutine f_setFailedGruMissing(start_gru, end_gru) bind(C, name="f_setFailedGr
 
   do iGRU = start_gru, end_gru
     if (summa_struct(1)%failedGrus(iGRU)) then
-      do iFreq=1, maxVarFreq
+      do iFreq=1, maxvarFreq
         if(.not. outFreq(iFreq)) cycle
         ! forc
         do iVar=1, size(forc_meta)
@@ -205,7 +205,7 @@ subroutine f_setFailedGruMissing(start_gru, end_gru) bind(C, name="f_setFailedGr
               summa_struct(1)%forcStruct%gru(iGRU)%hru(iHRU)%var(iVar)%tim(:) = realMissing
             endif 
           end do ! iHRU
-        end do ! ivar
+        end do ! iVar
 
         ! prog
         do iVar = 1, size(prog_meta)
@@ -331,7 +331,7 @@ subroutine f_allocateOutputBuffer(max_steps, num_gru, err, message_r) &
   if (.not.allocated(outputTimeStep)) then
     allocate(outputTimeStep(num_gru), stat=err)
     do iGRU = 1, num_gru
-      allocate(outputTimeStep(iGRU)%dat(maxVarFreq), stat=err)
+      allocate(outputTimeStep(iGRU)%dat(maxvarFreq), stat=err)
       outputTimeStep(iGRU)%dat(:) = 1
     end do
   end if
@@ -391,7 +391,7 @@ subroutine f_deallocateOutputBuffer(handle_ncid) &
 
   call c_f_pointer(handle_ncid, output_ncid)
   
-  do iFreq = 1, maxVarFreq
+  do iFreq = 1, maxvarFreq
     if (output_ncid%var(iFreq) /= integerMissing) then
       call nc_file_close(output_ncid%var(iFreq), err, message)
     end if
