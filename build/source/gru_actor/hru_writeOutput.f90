@@ -356,7 +356,7 @@ subroutine writeParam(indxGRU,indxHRU,struct,meta,structName,err,message)
   integer(i4b)                :: iVar             ! loop through variables
   
   ! initialize error control
-  err=0;message="hru_modelwrite.f90-writeParam/"
+  err=0;message="writeParam/"
 
   ! loop through local column model parameters
   do iVar = 1,size(meta)
@@ -440,7 +440,7 @@ subroutine writeData(indxGRU,indxHRU,iStep,structName,finalizeStats, &
     iVar_loop: do iVar = 1,size(meta)
 
       ! initialize message
-      message="hru_modelwrite.f90-writeData/"//trim(meta(iVar)%varName)
+      message="writeData/"//trim(meta(iVar)%varName)
 
       ! handle time first
       if (meta(iVar)%varName=='time')then
@@ -552,7 +552,7 @@ subroutine writeTime(indxGRU,indxHRU,iStep,finalizeStats,meta,datt,err,message)
  integer(i4b)                  :: iVar              ! variable index
  integer(i4b)                  :: iFreq             ! frequency index
  ! initialize error control
- err=0;message="hru_modelwrite.f90-writeTime/"
+ err=0;message="writeTime/"
 
  ! loop through output frequencies
  do iFreq=1,maxvarFreq
