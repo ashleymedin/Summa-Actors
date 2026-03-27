@@ -536,70 +536,83 @@ subroutine writeScalar(ncid, outputTimestep, outputTimestepUpdate, nSteps, minGR
   integer(i4b)  ,intent(in)         :: map(:)                  ! map into stats child struct
   integer(i4b)  ,intent(inout)      :: err
   character(*)  ,intent(inout)      :: message
-
   ! local variables
-  integer(i4b)                      :: gruCounter=0             ! counter for the realVecs
-  integer(i4b)                      :: hru_counter=0
-  integer(i4b)                      :: iStep=1                  ! counter for looping over nSteps
-  integer(i4b)                      :: stepCounter=0            ! counter for the realVec
-  integer(i4b)                      :: maxStepCounter=0         ! counter for the realVec
+  integer(i4b)                      :: hruCounter=0
+  integer(i4b)                      :: iStep=1                 ! counter for looping over nSteps
+  integer(i4b)                      :: stepCounter=0           ! counter for the realVec
+  integer(i4b)                      :: maxStepCounter=0        ! counter for the realVec
   integer(i4b)                      :: iGRU,iHRU
+  real(rkind)                       :: nSpace                  ! number of spatial points to write
   ! output array
   real(rkind)                       :: realVec(nHRUrun, nSteps)! real vector for all HRUs in the run domain
   real(rkind)                       :: val
 
   err=0; message="writeOutput.f90-writeScalar/"
-  realVec = realMissing
-  maxStepCounter = 0
 
-  select type(stat)
-    class is (gru_hru_time_doubleVec)
-      gruCounter=0
-      hru_counter=0
-      do iGRU = minGRU, maxGRU
-        ! gruCounter = gruCounter + 1
-        do iHRU = 1, size(gru_struc(iGRU)%hruInfo)
-          hru_counter = hru_counter + 1
-          stepCounter = 0
-          do iStep = 1, nSteps
-            if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(iStep)%dat(iFreq)) cycle
-            stepCounter = stepCounter + 1
-            val = stat%gru(iGRU)%hru(iHRU)%var(map(iVar))%tim(iStep)%dat(iFreq)
-            ! Handle missing values
-            if (ieee_is_nan(val)) then
-              val = realMissing
-            end if
-            ! Handle numeric conversion issues
-            if (val < -1.0e37 .or. val > 1.0e37) then
-              print *, "Warning: Value out of range for NetCDF variable: ", val
-              val = realMissing
-            end if
-            realVec(hru_counter, stepCounter) = val
-            outputTimeStepUpdate(iFreq) = stepCounter
-          end do ! iStep
-          ! We need to output the farthest time step achieved within the batch
-          if (stepCounter .gt. maxStepCounter) maxStepCounter = stepCounter
-        end do ! iHRU
-      end do ! iGRU 
+  ! initialize the data vectors
+  select type (stat)
+   class is (gru_hru_doubleVec); nSpace = nHRUrun; realVec(:,:) = realMissing; dataType=ixReal
+   class is (gru_doubleVec);     nSpace =  maxGRU - minGRU + 1 ; realVec(:,:) = realMissing; dataType=ixReal
+    class default; message=trim(message)//'stats must be scalarv and of type gru_hru_doubleVec or gru_doubleVec'; err=20; return;err=20; return
+  end select
 
-      err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq),&
-                         realVec(1:hru_counter, 1:stepCounter),    &
-                         start=(/minGRU,outputTimestep(iFreq)/),   & 
-                         count=(/nHRUrun,maxStepCounter/))
-      if(err/=0)then
-        print*, trim(nf90_strerror(err))
-        print *, "Variable: ", trim(meta(iVar)%varName)
-        print*,iFreq,meta(iVar)%ncVarID(iFreq),ncid%var(iFreq),minGRU
-        print*,outputTimestep(iFreq),stepCounter,nSteps
-        print*,size(gru_struc(iGRU)%hruInfo),nHRUrun,hru_counter
-        ! Print size and mean of realVec
-        print *, "Size of realVec: ", size(realVec)
-        print *, "Mean of realVec: ", sum(realVec(1:hru_counter, 1:stepCounter)) / (hru_counter * stepCounter)
-      endif
-    class default; err=20; message=trim(message)//'stats must be scalarv and of type gru_hru_doubleVec'; return
-  end select  ! stat
+  ! loop thru GRUs and HRUs and time
+  do iGRU = minGRU, maxGRU
+    hruLoop do iHRU = 1, size(gru_struc(iGRU)%hruInfo)
+      hruCounter = hruCounter + 1
+      stepCounter = 0
+      do iStep = 1, nSteps
+        if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(iStep)%dat(iFreq)) cycle
+        stepCounter = stepCounter + 1
 
-end subroutine
+        select type(stat)
+          class is (gru_hru_time_doubleVec); val = stat%gru(iGRU)%hru(iHRU)%var(map(iVar))%tim(iStep)%dat(iFreq)
+          class is (gru_time_doubleVec); val = stat%gru(iGRU)%var(map(iVar))%tim(iStep)%dat(iFreq)
+        end select
+
+        ! Handle missing values
+        if (ieee_is_nan(val)) then
+          val = realMissing
+        end if
+        ! Handle numeric conversion issues
+        if (val < -1.0e37 .or. val > 1.0e37) then
+          print *, "Warning: Value out of range for NetCDF variable: ", val
+          val = realMissing
+        end if
+        outputTimeStepUpdate(iFreq) = stepCounter
+
+        select type(stat)
+          class is (gru_hru_time_doubleVec); realVec(hruCounter, stepCounter) = val
+          class is (gru_time_doubleVec); realVec(iGRU, stepCounter) = val; if(iStep==nSteps) exit hruLoop ! only need to get the GRU-level data once
+        end select
+
+    end do ! iStep
+    ! We need to output the farthest time step achieved within the batch
+    if (stepCounter .gt. maxStepCounter) maxStepCounter = stepCounter
+
+  end do hruLoop ! iHRU
+end do ! iGRU
+
+! write the data vectors
+select case (dataType)
+  case (ixReal); err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq),&
+                       realVec(1:nSpace, 1:stepCounter),    &
+                       start=(/minGRU,outputTimestep(iFreq)/),   & 
+                       count=(/nSpace,maxStepCounter/))
+end select
+
+if(err/=0)then
+  print*, trim(nf90_strerror(err))
+  print *, "Variable: ", trim(meta(iVar)%varName)
+  print*,iFreq,meta(iVar)%ncVarID(iFreq),ncid%var(iFreq),minGRU
+  print*,outputTimestep(iFreq),stepCounter,nSteps
+  print*,size(gru_struc(iGRU)%hruInfo),nHRUrun,nSpace
+  ! Print size and mean of realVec
+  print *, "Size of realVec: ", size(realVec)
+  print *, "Mean of realVec: ", sum(realVec(1:nSpace, 1:stepCounter)) / (nSpace * stepCounter)
+endif
+
+end subroutine writeScalar
 
 ! **********************************************************************************************************
 ! private subroutine writeVector: write vector variables from data structures 
@@ -610,29 +623,29 @@ subroutine writeVector(ncid, outputTimestep, nSteps, minGRU, maxGRU, &
   USE var_lookup,only:iLookIndex                     ! index into index structure
   USE var_lookup,only:iLookVarType                   ! index into type structure
   implicit none
-  type(var_i)   ,intent(in)             :: ncid                    ! fileid
-  integer(i4b)  ,intent(inout)          :: outputTimestep(:)       ! output time step
-  integer(i4b)  ,intent(in)             :: nSteps                  ! number of timeSteps
-  integer(i4b)  ,intent(in)             :: minGRU                  ! minGRU index to write
-  integer(i4b)  ,intent(in)             :: maxGRU                  ! maxGRU index to write - probably not needed
+  type(var_i)   ,intent(in)             :: ncid              ! fileid
+  integer(i4b)  ,intent(inout)          :: outputTimestep(:) ! output time step
+  integer(i4b)  ,intent(in)             :: nSteps            ! number of timeSteps
+  integer(i4b)  ,intent(in)             :: minGRU            ! minGRU index to write
+  integer(i4b)  ,intent(in)             :: maxGRU            ! maxGRU index to write - probably not needed
   integer(i4b)  ,intent(in)             :: nHRUrun
-  integer(i4b)  ,intent(in)             :: iFreq                   ! output file index (year, month, day, timesteps)
-  integer(i4b)  ,intent(in)             :: iVar                    ! netcdf variable we are writing data for
-  type(var_info),intent(in)             :: meta(:)                 ! meta data
-  class(*)      ,intent(in)             :: datt               ! timestep data
-  type(gru_hru_time_intVec) ,intent(in) :: indx         ! index data
+  integer(i4b)  ,intent(in)             :: iFreq             ! output file index (year, month, day, timesteps)
+  integer(i4b)  ,intent(in)             :: iVar              ! netcdf variable we are writing data for
+  type(var_info),intent(in)             :: meta(:)           ! meta data
+  class(*)      ,intent(in)             :: datt              ! timestep data
+  type(gru_hru_time_intVec) ,intent(in) :: indx              ! index data
   integer(i4b)  ,intent(inout)          :: err
   character(*)  ,intent(inout)          :: message
 
   ! local variables
-  integer(i4b)                          :: gruCounter             ! counter for the realVecs
-  integer(i4b)                          :: hru_counter
-  integer(i4b)                          :: iStep                  ! counter for looping over nSteps
-  integer(i4b)                          :: stepCounter            ! counter for the realVec
+  integer(i4b)                          :: hruCounter=0
+  integer(i4b)                          :: iStep             ! counter for looping over nSteps
+  integer(i4b)                          :: stepCounter       ! counter for the realVec
   integer(i4b)                          :: iGRU,iHRU
   integer(i4b)                          :: nSoil
   integer(i4b)                          :: nSnow
   integer(i4b)                          :: nLayers
+  real(rkind)                           :: nSpace             ! number of spatial points to write
   ! output array
   integer(i4b)                          :: datLength         ! length of each data vector
   integer(i4b)                          :: maxLength         ! maximum length of each data vector
@@ -643,76 +656,74 @@ subroutine writeVector(ncid, outputTimestep, nSteps, minGRU, maxGRU, &
   integer(i4b)                          :: intArray(nHRUrun,maxLayers+1)   ! integer array for all HRUs in the run domain
   err=0; message="writeOutput.f90-writeVector/"
 
-  ! initialize the data vectors
-  select type (datt)
-    class is (gru_hru_time_doubleVec); realArray(:,:) = realMissing;    dataType=ixReal
-    class is (gru_hru_time_intVec);     intArray(:,:) = integerMissing; dataType=ixInteger
-    class default; err=20; message=trim(message)//'data must not be scalarv and either of type gru_hru_doubleVec or gru_hru_intVec'; return
-  end select
-  ! Loop over GRUs
+   ! loop time
   stepCounter = outputTimeStep(iFreq)
   do iStep = 1, nSteps
-    gruCounter = 1
-    hru_counter = 1
-    do iGRU = minGRU, maxGRU
-      do iHRU=1, size(gru_struc(iGRU)%hruInfo)
+    hruCounter = 0
+    
+    ! initialize the data vectors
+    select type (datt)
+      class is (gru_hru_time_doubleVec); nSpace = nHRUrun; realArray(:,:) = realMissing;    dataType=ixReal
+      class is (gru_hru_time_intVec);    nSpace = nHRUrun;  intArray(:,:) = integerMissing; dataType=ixInteger
+      class is (gru_time_doubleVec);     nSpace = nGRUrun; realArray(:,:) = realMissing;    dataType=ixReal
+      class is (gru_time_intVec);        nSpace = nGRUrun;  intArray(:,:) = integerMissing; dataType=ixInteger
+      class default; message=trim(message)//'data is not scalarv so should be either of type gru_hru_[double or int]Vec or gru_[double or int]Vec';err=20; return
+    end select
+
+    ! loop thru GRUs and HRUs
+    do iGRU=1,size(gru_struc)
+      do iHRU=1,gru_struc(iGRU)%hruCount
+        hruCounter = hruCounter + 1
+        if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(iStep)%dat(iFreq)) cycle
+
         ! get the model layers
         nSoil   = indx%gru(iGRU)%hru(iHRU)%var(iLookIndex%nSoil)%tim(iStep)%dat(1)
         nSnow   = indx%gru(iGRU)%hru(iHRU)%var(iLookIndex%nSnow)%tim(iStep)%dat(1)
         nLayers = indx%gru(iGRU)%hru(iHRU)%var(iLookIndex%nLayers)%tim(iStep)%dat(1)
 
-        ! get the length of each data vector
         select case (meta(iVar)%varType)
-            case(iLookVarType%wLength); datLength = maxSpectral
-            case(iLookVarType%midToto); datLength = nLayers
-            case(iLookVarType%midSnow); datLength = nSnow
-            case(iLookVarType%midSoil); datLength = nSoil
-            case(iLookVarType%ifcToto); datLength = nLayers+1
-            case(iLookVarType%ifcSnow); datLength = nSnow+1
-            case(iLookVarType%ifcSoil); datLength = nSoil+1
-            case default; cycle
-        end select ! vartype
+          case(iLookVarType%wLength); datLength = nSpecBand
+          case(iLookVarType%midToto); datLength = nLayers
+          case(iLookVarType%midSnow); datLength = nSnow
+          case(iLookVarType%midSoil); datLength = nSoil
+          case(iLookVarType%ifcToto); datLength = nLayers+1
+          case(iLookVarType%ifcSnow); datLength = nSnow+1
+          case(iLookVarType%ifcSoil); datLength = nSoil+1
+          case(iLookVarType%routing); datLength = nTimeDelay
+          case default; return ! if not a vector variable type, skip to next variable
+        end select ! varType
 
         ! get the data vectors
         select type (datt)
-            class is (gru_hru_time_doubleVec)
-                if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(iStep)%dat(iFreq)) cycle
-                realArray(hru_counter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(iStep)%dat(1:datLength)
-
-            class is (gru_hru_time_intVec)
-                if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(iStep)%dat(iFreq)) cycle
-                intArray(hru_counter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(iStep)%dat(1:datLength)
-            class default; err=20; message=trim(message)//'data must not be scalarv and either of type gru_hru_doubleVec or gru_hru_intVec'; return
+          class is (gru_hru_time_doubleVec); realArray(hruCounter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(iStep)%dat(:)
+          class is (gru_hru_time_intVec);     intArray(hruCounter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(iStep)%dat(:)
+          class is (gru_time_doubleVec); realArray(hruCounter,1:datLength) = datt%gru(iGRU)%var(iVar)%tim(iStep)%dat(:); exit ! only need to get the GRU-level data once
+          class is (gru_time_intVec);     intArray(hruCounter,1:datLength) = datt%gru(iGRU)%var(iVar)%tim(iStep)%dat(:); exit ! only need to get the GRU-level data once
         end select
 
-        ! get the maximum length of each data vector
-        select case (meta(iVar)%varType)
-          case(iLookVarType%wLength); maxLength = maxSpectral
-          case(iLookVarType%midToto); maxLength = maxLayers
-          case(iLookVarType%midSnow); maxLength = maxLayers-nSoil
-          case(iLookVarType%midSoil); maxLength = nSoil
-          case(iLookVarType%ifcToto); maxLength = maxLayers+1
-          case(iLookVarType%ifcSnow); maxLength = (maxLayers-nSoil)+1
-          case(iLookVarType%ifcSoil); maxLength = nSoil+1
-          case default; cycle
-        end select ! vartype
-        hru_counter = hru_counter + 1
-      end do ! iHRU
-    end do ! iGRU
+      end do  ! HRU loop
+    end do  ! GRU loop        
+
+    ! get the maximum length of each data vector
+    select case (meta(iVar)%varType)
+      case(iLookVarType%wLength); maxLength = nSpecBand
+      case(iLookVarType%midToto); maxLength = maxLayers
+      case(iLookVarType%midSnow); maxLength = maxSnowLayers
+      case(iLookVarType%midSoil); maxLength = maxSoilLayers
+      case(iLookVarType%ifcToto); maxLength = maxLayers+1
+      case(iLookVarType%ifcSnow); maxLength = maxSnowLayers+1
+      case(iLookVarType%ifcSoil); maxLength = maxSoilLayers+1
+      case(iLookVarType%routing); maxLength = nTimeDelay
+      case default; return ! if not a vector variable type, skip to next variable
+    end select ! varType
 
    ! write the data vectors
     select case(dataType)
+      case(ixReal);    err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq),realArray(1:nSpace,1:maxLength),start=(/minGRU,1,stepCounter/),count=(/nSpace,maxLength,1/))
+      case(ixInteger); err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq),intArray(1:nSpace,1:maxLength),start=(/minGRU,1,stepCounter/),count=(/nSpace,maxLength,1/))
+     end select ! data type
+    if(err/=0)then; print*, "ERROR: with nf90_put_var in data vector"; return; endif
 
-      case(ixReal)
-        err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq),realArray(1:nHRUrun,1:maxLength),start=(/minGRU,1,stepCounter/),count=(/nHRUrun,maxLength,1/))
-        if(err/=0)then; print*, "ERROR: with nf90_put_var in data vector (ixReal)"; return; endif
-        realArray(:,:) = realMissing ! reset the realArray
-      case(ixInteger)
-        err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq),intArray(1:nHRUrun,1:maxLength),start=(/minGRU,1,stepCounter/),count=(/nHRUrun,maxLength,1/))
-        if(err/=0)then; print*, "ERROR: with nf90_put_var in data vector (ixInteger)"; return; endif
-        intArray(:,:) = integerMissing ! reset the intArray
-      case default; err=20; message=trim(message)//'data must be of type integer or real'; return
-    end select ! data type
     stepCounter = stepCounter + 1
   end do ! iStep
 
@@ -739,7 +750,7 @@ subroutine writeTime(ncid,outputTimestep,iStep,meta,datt,err,message)
   integer(i4b)                  :: iFreq             ! frequency index
   integer(i4b)                  :: ncVarID           ! used only for time
   ! initialize error control
-  err=0;message="f-writeTime/"
+  err=0;message="writeTime/"
   ! loop through output frequencies
   do iFreq=1,maxvarFreq
 

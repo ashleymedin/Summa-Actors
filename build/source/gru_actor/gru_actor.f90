@@ -1026,7 +1026,7 @@ subroutine allocateDat_rkind_nSteps(metadata,varData,nSnow, nSoil, &
 
   nLayers = nSnow+nSoil
   do iStep=1, nSteps
-    select case(metadata(iVar)%vartype)
+    select case(metadata(iVar)%varType)
       case(iLookVarType%scalarv); allocate(varData%var(iVar)%tim(iStep)%dat(1),stat=err)
       case(iLookVarType%wLength); allocate(varData%var(iVar)%tim(iStep)%dat(nSpecBand),stat=err)
       case(iLookVarType%midSnow); allocate(varData%var(iVar)%tim(iStep)%dat(nSnow),stat=err)
@@ -1040,7 +1040,7 @@ subroutine allocateDat_rkind_nSteps(metadata,varData,nSnow, nSoil, &
       case(iLookVarType%outstat); allocate(varData%var(iVar)%tim(iStep)%dat(maxvarfreq*2),stat=err)
       case(iLookVarType%unknown); allocate(varData%var(iVar)%tim(iStep)%dat(0),stat=err)
       case default
-      err=40; message=trim(message)//"1. unknownVariableType[name='"//trim(metadata(iVar)%varname)//"'; type='"//trim(get_varTypeName(metadata(iVar)%vartype))//"']"
+      err=40; message=trim(message)//"1. unknownVariableType[name='"//trim(metadata(iVar)%varname)//"'; type='"//trim(get_varTypeName(metadata(iVar)%varType))//"']"
       return
     end select
   end do ! (iStep)
@@ -1073,7 +1073,7 @@ subroutine allocateDat_rkind(metadata,varData,nSnow,nSoil,err,message)
   nVars = size(metaData)
   nLayers = nSnow+nSoil
   do iVar=1, nVars
-    select case(metadata(iVar)%vartype)
+    select case(metadata(iVar)%varType)
     case(iLookVarType%scalarv); allocate(varData%var(iVar)%dat(1),stat=err)
     case(iLookVarType%wLength); allocate(varData%var(iVar)%dat(nSpecBand),stat=err)
     case(iLookVarType%midSnow); allocate(varData%var(iVar)%dat(nSnow),stat=err)
@@ -1087,7 +1087,7 @@ subroutine allocateDat_rkind(metadata,varData,nSnow,nSoil,err,message)
     case(iLookVarType%outstat); allocate(varData%var(iVar)%dat(maxvarfreq*2),stat=err)
     case(iLookVarType%unknown); allocate(varData%var(iVar)%dat(0),stat=err)
     case default
-        err=40; message=trim(message)//"1. unknownVariableType[name='"//trim(metadata(iVar)%varname)//"'; type='"//trim(get_varTypeName(metadata(iVar)%vartype))//"']"
+        err=40; message=trim(message)//"1. unknownVariableType[name='"//trim(metadata(iVar)%varname)//"'; type='"//trim(get_varTypeName(metadata(iVar)%varType))//"']"
         return
     end select
   end do
@@ -1120,7 +1120,7 @@ subroutine allocateDat_int(metadata,varData,nSnow, nSoil, &
 
   nLayers = nSnow+nSoil
   do iStep=1, nSteps
-    select case(metadata(iVar)%vartype)
+    select case(metadata(iVar)%varType)
       case(iLookVarType%scalarv); allocate(varData%var(iVar)%tim(iStep)%dat(1),stat=err)
       case(iLookVarType%wLength); allocate(varData%var(iVar)%tim(iStep)%dat(nSpecBand),stat=err)
       case(iLookVarType%midSnow); allocate(varData%var(iVar)%tim(iStep)%dat(nSnow),stat=err)
@@ -1134,7 +1134,7 @@ subroutine allocateDat_int(metadata,varData,nSnow, nSoil, &
       case(iLookVarType%outstat); allocate(varData%var(iVar)%tim(iStep)%dat(maxvarfreq*2),stat=err)
       case(iLookVarType%unknown); allocate(varData%var(iVar)%tim(iStep)%dat(0),stat=err)
       case default
-      err=40; message=trim(message)//"1. unknownVariableType[name='"//trim(metadata(iVar)%varname)//"'; type='"//trim(get_varTypeName(metadata(iVar)%vartype))//"']"
+      err=40; message=trim(message)//"1. unknownVariableType[name='"//trim(metadata(iVar)%varname)//"'; type='"//trim(get_varTypeName(metadata(iVar)%varType))//"']"
       return
     end select
   end do ! loop through time steps

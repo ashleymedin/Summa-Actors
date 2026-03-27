@@ -1732,7 +1732,7 @@ subroutine set_data_var_dlength_local(metaData, varData_out, num_var, &
 
   sum_elem = 0
   do iVar=1,num_var
-    select case(metadata(iVar)%vartype)
+    select case(metadata(iVar)%varType)
       case(iLookVarType%ifcSnow, iLookVarType%ifcSoil, iLookVarType%ifcToto)
         dat_length = varData_in(iVar) - 1
         allocate(varData_out%var(iVar)%dat(0:dat_length))

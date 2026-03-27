@@ -316,7 +316,7 @@ subroutine hru_writeRestart(&
       case(iLookVarType%ifcSoil);              
         summa_struct(1)%progStruct%gru(indxGRU)%hru(indxHRU)%var(iVar)%tim(checkPoint)%dat(:) = hru_data%progstruct%var(iVar)%dat(:) 
       case(iLookVarType%ifcToto);              
-        do iDat = 0, size(hru_data%progstruct%var(iVar)%dat(:)) -1 !vartype 8 in hru_data begins its index at 0 instead of the default of 1. this case accomodates that
+        do iDat = 0, size(hru_data%progstruct%var(iVar)%dat(:)) -1 !varType 8 in hru_data begins its index at 0 instead of the default of 1. this case accomodates that
           summa_struct(1)%progStruct%gru(indxGRU)%hru(indxHRU)%var(iVar)%tim(checkPoint)%dat(iDat+1) = hru_data%progstruct%var(iVar)%dat(iDat)
         end do ! iDat 
       case(iLookVarType%midSnow);
@@ -503,7 +503,7 @@ subroutine writeData(indxGRU,indxHRU,iStep,structName,finalizeStats, &
           message="writeData/"; cycle iVar_loop ! move onto the next variable
           ! case parSoil only in parameters (mpar, not written here) 
           ! case unknown skipped above
-        end select ! vartype
+        end select ! varType
       
         ! get the data vectors
         select type (datt)
@@ -574,7 +574,6 @@ subroutine writeTime(indxGRU,indxHRU,iStep,finalizeStats,meta,datt,err,message)
  end do ! iFreq
 
 end subroutine writeTime
-
 
 ! ******************************************************************************
 ! public subroutine setFinalizeStatsFalse: set finalizeStats to false
