@@ -19,10 +19,12 @@ behavior SummaServer::summa_server() {
   client_container_ = Client_Container();
   // TODO: Batch Container should have start gru passed to it
   batch_container_ = BatchContainer(
-          1,
+          settings_.distributed_settings_.start_gru_,
           settings_.distributed_settings_.total_hru_count_,
           settings_.distributed_settings_.num_hru_per_batch_, "");
-
+  self_->println("\nStart GRU {}", 
+                 settings_.distributed_settings_.start_gru_);
+      
 
   // Publish the server actor
   auto is_published = self_->system().middleman().publish(self_, 
