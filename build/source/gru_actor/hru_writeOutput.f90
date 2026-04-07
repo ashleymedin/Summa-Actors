@@ -106,6 +106,7 @@ subroutine writeHRUOutput(indxGRU, indxHRU, timestep, outputStep, hru_data, err,
   logical(lgt)                          :: defNewOutputFile=.false.
   logical(lgt)                          :: printRestart=.false.
   logical(lgt)                          :: printProgress=.false.
+  integer(i4b)                          :: maxLengthAll      ! maxLength all data writing
   character(len=256)                    :: restartFile       ! restart file name
   character(len=256)                    :: timeString        ! portion of restart file name that contains the write-out time
   integer(i4b)                          :: iStruct           ! index of model structure
@@ -121,6 +122,10 @@ subroutine writeHRUOutput(indxGRU, indxHRU, timestep, outputStep, hru_data, err,
                             hru_data%finalizeStats%dat,                        &
                             hru_data%statCounter%var, err, cmessage)
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
+
+  ! find longest possible length
+  maxLengthAll = max(nSpecBand,maxLayers+1)
+  if(allowRoutingOutput) maxLengthAll = max(maxLengthAll, nTimeDelay)
 
   ! Write parameters to output structure if this is the first
   if (timestep == 1)then
@@ -201,33 +206,33 @@ subroutine writeHRUOutput(indxGRU, indxHRU, timestep, outputStep, hru_data, err,
   ! ****************************************************************************
   do iStruct=1,size(structInfo)
     select case(trim(structInfo(iStruct)%structName))
-      case('forc'); call writeData(indxGRU,indxHRU,outputStep,"forc",         &
-                                   hru_data%finalizeStats%dat,                &
+      case('forc'); call writeData(indxGRU,indxHRU,outputStep,maxLengthAll,   &
+                                   "forc",hru_data%finalizeStats%dat,         &
                                    forc_meta,hru_data%forcStat,               &
                                    hru_data%forcStruct,forcChild_map,         &
                                    hru_data%indxStruct,err,cmessage)
-      case('prog'); call writeData(indxGRU,indxHRU,outputStep,"prog",         &
-                                   hru_data%finalizeStats%dat,                &
+      case('prog'); call writeData(indxGRU,indxHRU,outputStep,maxLengthAll,   &
+                                   "prog",hru_data%finalizeStats%dat,         &
                                    prog_meta,hru_data%progStat,               &
                                    hru_data%progStruct,progChild_map,         &
                                    hru_data%indxStruct,err,cmessage)
-      case('diag'); call writeData(indxGRU,indxHRU,outputStep,"diag",         &
-                                   hru_data%finalizeStats%dat,                &
+      case('diag'); call writeData(indxGRU,indxHRU,outputStep,maxLengthAll,   &
+                                   "diag",hru_data%finalizeStats%dat,         &
                                    diag_meta,hru_data%diagStat,               &
                                    hru_data%diagStruct,diagChild_map,         &
                                    hru_data%indxStruct,err,cmessage)
-      case('flux'); call writeData(indxGRU,indxHRU,outputStep,"flux",         &
-                                   hru_data%finalizeStats%dat,                &
+      case('flux'); call writeData(indxGRU,indxHRU,outputStep,maxLengthAll,   &
+                                   "flux",hru_data%finalizeStats%dat,         &
                                    flux_meta,hru_data%fluxStat,               &
                                    hru_data%fluxStruct,fluxChild_map,         &
                                    hru_data%indxStruct,err,cmessage)
-      case('indx'); call writeData(indxGRU,indxHRU,outputStep,"indx",         &
-                                   hru_data%finalizeStats%dat,                &
+      case('indx'); call writeData(indxGRU,indxHRU,outputStep,maxLengthAll,   &
+                                   "indx",hru_data%finalizeStats%dat,         &
                                    indx_meta,hru_data%indxStat,               &
                                    hru_data%indxStruct,indxChild_map,         &
                                    hru_data%indxStruct,err,cmessage)
-      case('bvar'); call writeData(indxGRU,indxHRU,outputStep,"bvar",         &
-                                   hru_data%finalizeStats%dat,                &
+      case('bvar'); call writeData(indxGRU,indxHRU,outputStep,maxLengthAll,   &
+                                   "bvar",hru_data%finalizeStats%dat,         &
                                    bvar_meta,hru_data%bvarStat,               &
                                    hru_data%bvarStruct,bvarChild_map,         &
                                    hru_data%indxStruct,err,cmessage)                                   
@@ -391,7 +396,7 @@ end subroutine writeParam
 ! **************************************************************************************
 ! private subroutine writeData: write model time-dependent data
 ! **************************************************************************************
-subroutine writeData(indxGRU,indxHRU,iStep,structName,finalizeStats, &
+subroutine writeData(indxGRU,indxHRU,iStep,maxLengthAll,structName,finalizeStats, &
                       meta,stat,datt,map,indx,err,message)
   USE data_types,only:var_info                       ! metadata type
   USE var_lookup,only:maxvarStat                     ! index into stats structure
@@ -406,6 +411,7 @@ subroutine writeData(indxGRU,indxHRU,iStep,structName,finalizeStats, &
   integer(i4b)  ,intent(in)        :: indxGRU
   integer(i4b)  ,intent(in)        :: indxHRU
   integer(i4b)  ,intent(in)        :: iStep
+  integer(i4b)  ,intent(in)        :: maxLengthAll      ! maxLength all data
   character(*)  ,intent(in)        :: structName
   logical(lgt)  ,intent(in)        :: finalizeStats(:)  ! flags to finalize statistics
   type(var_info),intent(in)        :: meta(:)           ! meta data

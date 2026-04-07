@@ -17,6 +17,13 @@ module output_buffer_write
   ! vector lengths
   USE var_lookup, only: maxvarFreq ! number of output frequencies
   USE var_lookup, only: maxvarStat ! number of statistics
+  ! output constraints
+  USE globalData,only:maxSnowLayers       ! maximum number of snow layers
+  USE globalData,only:maxSoilLayers       ! maximum number of soil layers
+  USE globalData,only:maxLayers           ! maximum number of layers
+  USE globalData,only:nTimeDelay          ! number of timesteps in the time delay histogram
+  USE globalData,only:nSpecBand           ! maximum number of spectral bands
+  USE globalData,only:allowRoutingOutput  ! flag to allow routing variable output
 
   implicit none
   public::f_writeOutputDA
@@ -32,7 +39,7 @@ module output_buffer_write
 ! public subroutine f_writeOutputDA: write model output to file
 ! ******************************************************************************
 subroutine f_writeOutputDA(handle_ncid, output_step, start_gru, max_gru, &
-    write_parm_flag, err, message_r) bind(C, name="f_writeOutputDA")
+    write_param_flag, err, message_r) bind(C, name="f_writeOutputDA")
   USE var_lookup,only:maxvarFreq
   USE globalData,only:structInfo
   USE globalData,only:bvarChild_map,forcChild_map,progChild_map,diagChild_map,&
@@ -44,14 +51,15 @@ subroutine f_writeOutputDA(handle_ncid, output_step, start_gru, max_gru, &
   implicit none
   ! dummy variables
   type(c_ptr),intent(in), value        :: handle_ncid       ! ncid of the output file
-  integer(c_int),intent(in)            :: output_step         ! number of steps to write
+  integer(c_int),intent(in)            :: output_step       ! number of steps to write
   integer(c_int),intent(in)            :: start_gru         ! index of GRU we are currently writing for
   integer(c_int),intent(in)            :: max_gru           ! index of HRU we are currently writing for
-  logical(c_bool),intent(in)           :: write_parm_flag   ! flag to write parameters
+  logical(c_bool),intent(in)           :: write_param_flag  ! flag to write parameters
   integer(c_int),intent(out)           :: err               ! Error code
   type(c_ptr),intent(out)              :: message_r ! message to return to the caller
   ! local variables
   type(var_i),pointer                  :: ncid
+  integer(i4b)                         :: maxLengthAll      ! maxLength all data writing
   integer(i4b)                         :: iGRU,iHRU         ! loop through GRUs
   integer(i4b)                         :: iFreq             ! loop through output frequencies
   integer(i4b)                         :: indxHRU=1         ! index of HRU to write
@@ -66,8 +74,12 @@ subroutine f_writeOutputDA(handle_ncid, output_step, start_gru, max_gru, &
 
   num_gru = max_gru-start_gru + 1
   
+  ! find longest possible length
+  maxLengthAll = max(nSpecBand,maxLayers+1)
+  if(allowRoutingOutput) maxLengthAll = max(maxLengthAll, nTimeDelay)
+
   ! Write the parameters if first write
-  if (write_parm_flag) then
+  if (write_param_flag) then
     do iStruct=1,size(structInfo)
       do iGRU=start_gru, max_gru
         do iHRU=1,size(gru_struc(iGRU)%hruInfo)
@@ -125,32 +137,32 @@ subroutine f_writeOutputDA(handle_ncid, output_step, start_gru, max_gru, &
   do iStruct=1,size(structInfo)
     select case(trim(structInfo(iStruct)%structName))
       case('forc')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),output_step,&
+        call writeData(ncid,outputTimeStep(start_gru)%dat(:),maxLengthAll,output_step,&
                         start_gru, max_gru, num_gru, & 
                         forc_meta,summa_struct(1)%forcStat,summa_struct(1)%forcStruct,'forc', &
                         forcChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('prog')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),output_step,&
+        call writeData(ncid,outputTimeStep(start_gru)%dat(:),maxLengthAll,output_step,&
                         start_gru, max_gru, num_gru, &
                         prog_meta,summa_struct(1)%progStat,summa_struct(1)%progStruct,'prog', &
                         progChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('diag')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),output_step,&
+        call writeData(ncid,outputTimeStep(start_gru)%dat(:),maxLengthAll,output_step,&
                         start_gru, max_gru, num_gru, &
                         diag_meta,summa_struct(1)%diagStat,summa_struct(1)%diagStruct,'diag', &
                         diagChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('flux')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),output_step,&
+        call writeData(ncid,outputTimeStep(start_gru)%dat(:),maxLengthAll,output_step,&
                         start_gru, max_gru, num_gru, &
                         flux_meta,summa_struct(1)%fluxStat,summa_struct(1)%fluxStruct,'flux', &
                         fluxChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('indx')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),output_step,&
+        call writeData(ncid,outputTimeStep(start_gru)%dat(:),maxLengthAll,output_step,&
                         start_gru, max_gru, num_gru, &
                         indx_meta,summa_struct(1)%indxStat,summa_struct(1)%indxStruct,'indx', &
                         indxChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('bvar')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),output_step,&
+        call writeData(ncid,outputTimeStep(start_gru)%dat(:),maxLengthAll,output_step,&
                         start_gru, max_gru, num_gru, &
                         bvar_meta,summa_struct(1)%bvarStat,summa_struct(1)%bvarStruct,'bvar', &
                         bvarChild_map,summa_struct(1)%indxStruct,err,cmessage)
@@ -275,7 +287,7 @@ end subroutine writeTime
 ! **************************************************************************************
 ! public subroutine writeData: write model time-dependent data
 ! **************************************************************************************
-subroutine writeData(ncid,outputTimestep,output_step,&
+subroutine writeData(ncid,outputTimestep,maxLengthAll,output_step,&
                      minGRU, maxGRU, numGRU, meta,stat,datt,structName,map,indx,&
                      err,message)
   USE data_types,only:var_info                       ! metadata type
@@ -291,6 +303,7 @@ subroutine writeData(ncid,outputTimestep,output_step,&
   ! declare dummy variables
   type(var_i)   ,intent(in)        :: ncid              ! file ids
   integer(i4b)  ,intent(inout)     :: outputTimestep(:) ! output time step
+  integer(i4b)  ,intent(in)        :: maxLengthAll      ! maxLength all data
   integer(i4b)  ,intent(in)        :: output_step       ! Current step in output_buffer
   integer(i4b)  ,intent(in)        :: minGRU            ! minGRU index to write
   integer(i4b)  ,intent(in)        :: maxGRU            ! maxGRU index to write - probably not needed
@@ -371,7 +384,7 @@ subroutine writeData(ncid,outputTimestep,output_step,&
                          minGRU, maxGRU, nHRUrun, iFreq, iVar, meta, stat,   &
                          map, err, cmessage)
       else ! non-scalar variables: regular data structures
-        call writeVector(ncid, outputTimeStep, output_step, minGRU, &
+        call writeVector(ncid, outputTimeStep, maxLengthAll, output_step, minGRU, &
                          maxGRU, nHRUrun, iFreq, iVar, meta, datt, indx,   &
                          err, cmessage)
       end if 
@@ -411,7 +424,7 @@ subroutine writeScalar(ncid, outputTimestep, output_step, minGRU, maxGRU, &
   ! output array
   real(rkind)                       :: realVec(nHRUrun, 1) ! real vector max size for all HRUs in the run domain
 
-  err=0; message="writeOutput.f90-writeScalar/"
+  err=0; message="writeScalar/"
 
   ! initialize the data vectors
   select type (stat)
@@ -446,7 +459,7 @@ end subroutine writeScalar
 ! **********************************************************************************************************
 ! private subroutine writeVector: write vector variables from data structures 
 ! **********************************************************************************************************
-subroutine writeVector(ncid, outputTimestep, output_step, minGRU, maxGRU, &
+subroutine writeVector(ncid, outputTimestep, maxLengthAll, output_step, minGRU, maxGRU, &
   nHRUrun, iFreq, iVar, meta, datt, indx, err, message)
   USE data_types,only:var_info                       ! metadata type
   USE var_lookup,only:iLookIndex                     ! index into index structure
@@ -454,6 +467,7 @@ subroutine writeVector(ncid, outputTimestep, output_step, minGRU, maxGRU, &
   implicit none
   type(var_i)   ,intent(in)             :: ncid              ! fileid
   integer(i4b)  ,intent(inout)          :: outputTimestep(:) ! output time step
+  integer(i4b)  ,intent(in)             :: maxLengthAll      ! maxLength all data
   integer(i4b)  ,intent(in)             :: output_step       ! index in output_buffer  
   integer(i4b)  ,intent(in)             :: minGRU            ! minGRU index to write
   integer(i4b)  ,intent(in)             :: maxGRU            ! maxGRU index to write - probably not needed
@@ -479,9 +493,9 @@ subroutine writeVector(ncid, outputTimestep, output_step, minGRU, maxGRU, &
   integer(i4b)                          :: dataType          ! type of data
   integer(i4b),parameter                :: ixInteger=1001    ! named variable for integer
   integer(i4b),parameter                :: ixReal=1002       ! named variable for real
-  real(rkind)                           :: realArray(nHRUrun,maxLayers+1) ! real array for all HRUs in the run domain
-  integer(i4b)                          :: intArray(nHRUrun,maxLayers+1)  ! integer array for all HRUs in the run domain
-  err=0; message="writeOutput.f90-writeVector/"
+  real(rkind)                           :: realArray(nHRUrun,maxLengthAll) ! real array for all HRUs in the run domain
+  integer(i4b)                          :: intArray(nHRUrun,maxLengthAll)  ! integer array for all HRUs in the run domain
+  err=0; message="writeVector/"
 
   ! initialize the data vectors
   select type (datt)
