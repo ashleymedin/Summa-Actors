@@ -436,8 +436,8 @@ subroutine writeScalar(ncid, outputTimestep, output_step, minGRU, maxGRU, &
   ! loop thru GRUs and HRUs
   do iGRU = minGRU, maxGRU
     do iHRU = 1, size(gru_struc(iGRU)%hruInfo)
-    hruCounter = hruCounter + 1
-    if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(output_step)%dat(iFreq)) cycle
+     hruCounter = hruCounter + 1
+     if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(output_step)%dat(iFreq)) cycle
 
      select type(stat)
        class is (gru_hru_time_doubleVec); realVec(hruCounter, 1) = stat%gru(iGRU)%hru(iHRU)%var(map(iVar))%tim(output_step)%dat(iFreq)

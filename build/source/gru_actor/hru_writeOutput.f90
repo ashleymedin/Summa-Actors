@@ -474,12 +474,12 @@ subroutine writeData(indxGRU,indxHRU,iStep,maxLengthAll,structName,finalizeStats
         select type(stat)
           class is (var_dlength)
             select case(trim(structName))
-            case('forc'); summa_struct(1)%forcStat%gru(indxGRU)%hru(indxHRU)%var(map(iVar))%tim(iStep)%datt(iFreq) = stat%var(map(iVar))%dat(iFreq)
-            case('prog'); summa_struct(1)%progStat%gru(indxGRU)%hru(indxHRU)%var(map(iVar))%tim(iStep)%datt(iFreq) = stat%var(map(iVar))%dat(iFreq)
-            case('diag'); summa_struct(1)%diagStat%gru(indxGRU)%hru(indxHRU)%var(map(iVar))%tim(iStep)%datt(iFreq) = stat%var(map(iVar))%dat(iFreq)
-            case('flux'); summa_struct(1)%fluxStat%gru(indxGRU)%hru(indxHRU)%var(map(iVar))%tim(iStep)%datt(iFreq) = stat%var(map(iVar))%dat(iFreq)
-            case('indx'); summa_struct(1)%indxStat%gru(indxGRU)%hru(indxHRU)%var(map(iVar))%tim(iStep)%datt(iFreq) = stat%var(map(iVar))%dat(iFreq)
-            case('bvar'); summa_struct(1)%bvarStat%gru(indxGRU)%var(map(iVar))%tim(iStep)%datt(iFreq)              = stat%var(map(iVar))%dat(iFreq)
+            case('forc'); summa_struct(1)%forcStat%gru(indxGRU)%hru(indxHRU)%var(map(iVar))%tim(iStep)%dat(iFreq) = stat%var(map(iVar))%dat(iFreq)
+            case('prog'); summa_struct(1)%progStat%gru(indxGRU)%hru(indxHRU)%var(map(iVar))%tim(iStep)%dat(iFreq) = stat%var(map(iVar))%dat(iFreq)
+            case('diag'); summa_struct(1)%diagStat%gru(indxGRU)%hru(indxHRU)%var(map(iVar))%tim(iStep)%dat(iFreq) = stat%var(map(iVar))%dat(iFreq)
+            case('flux'); summa_struct(1)%fluxStat%gru(indxGRU)%hru(indxHRU)%var(map(iVar))%tim(iStep)%dat(iFreq) = stat%var(map(iVar))%dat(iFreq)
+            case('indx'); summa_struct(1)%indxStat%gru(indxGRU)%hru(indxHRU)%var(map(iVar))%tim(iStep)%dat(iFreq) = stat%var(map(iVar))%dat(iFreq)
+            case('bvar'); summa_struct(1)%bvarStat%gru(indxGRU)%var(map(iVar))%tim(iStep)%dat(iFreq)              = stat%var(map(iVar))%dat(iFreq)
             case default; err=21; message=trim(message)//"stats structure not found"; return
             end select
           class default; err=20; message=trim(message)//'stats must be scalarv and of type gru_hru_doubleVec or gru_doubleVec'; return

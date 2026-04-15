@@ -65,24 +65,24 @@ module actor_data_types
 
     ! ** double precision type of variable length with timestep storage
   type, public :: hru_time_double
-    type(var_time_d),allocatable      :: hru(:)     ! hru(:)%tim(:)%var
+    type(var_time_d),allocatable         :: hru(:)     ! hru(:)%tim(:)%var
   endtype hru_time_double
   ! ** integer type of variable length with timestep storage
   type, public :: hru_time_int
-    type(var_time_i),allocatable      :: hru(:)     ! hru(:)%tim(:)%var
+    type(var_time_i),allocatable         :: hru(:)     ! hru(:)%tim(:)%var
   endtype hru_time_int
   ! ** integer type of variable length with timestep storage
   type, public :: hru_time_int8
-    type(var_time_i8),allocatable     :: hru(:)     ! hru(:)%tim(:)%var
+    type(var_time_i8),allocatable        :: hru(:)     ! hru(:)%tim(:)%var
   endtype hru_time_int8
 
   ! ** double precission type of timestep variable length
   type, public :: hru_time_doubleVec
-    type(var_time_dlength), allocatable :: hru(:)
+    type(var_time_dlength), allocatable  :: hru(:)
   endtype hru_time_doubleVec
 
   type, public :: hru_time_intVec
-    type(var_time_ilength), allocatable :: hru(:)
+    type(var_time_ilength), allocatable  :: hru(:)
   endtype hru_time_intVec
 
   type, public :: hru_time_flagVec
@@ -90,19 +90,19 @@ module actor_data_types
   endtype hru_time_flagVec
 
   type,public :: gru_hru_time_flagVec
-    type(hru_time_flagVec),allocatable :: gru(:)  ! gru(:)%hru(:)%tim(:)%dat(:)
-  endtype gru_hru_time_flagVec           
+    type(hru_time_flagVec),allocatable   :: gru(:)  ! gru(:)%hru(:)%tim(:)%dat(:)
+  endtype gru_hru_time_flagVec             
 
   type, public :: gru_hru_time_double
-    type(hru_time_double),allocatable :: gru(:)
+    type(hru_time_double),allocatable    :: gru(:)
   endtype gru_hru_time_double
 
   type, public :: gru_hru_time_int
-    type(hru_time_int), allocatable   :: gru(:)
+    type(hru_time_int), allocatable      :: gru(:)
   endtype gru_hru_time_int
 
   type, public :: gru_hru_time_int8
-    type(hru_time_int8), allocatable  :: gru(:)  
+    type(hru_time_int8), allocatable     :: gru(:)  
   endtype gru_hru_time_int8 
 
   type, public :: gru_hru_time_doubleVec
@@ -112,6 +112,14 @@ module actor_data_types
   type, public :: gru_hru_time_intVec
     type(hru_time_intVec),allocatable    :: gru(:)
   endtype gru_hru_time_intVec
+
+  type, public :: gru_time_doubleVec
+    type(var_time_dlength),allocatable :: gru(:)
+  endtype gru_time_doubleVec
+
+  type, public :: gru_time_intVec
+    type(var_time_ilength),allocatable    :: gru(:)
+  endtype gru_time_intVec
 
   type, public :: hru_type
     type(zLookup),pointer                      :: lookupStruct               ! z(:)%var(:)%lookup(:) -- lookup tables

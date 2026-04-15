@@ -54,7 +54,7 @@ module fileAccess_writeOutput
                       hru_d,               & ! x%hru(:)            (dp)
                       ! gru dimension
                       gru_int,             & ! x%gru(:)%var(:)     (i4b)
-                      gru_int8,            & ! x%gru(:)%var(:)            (i8b)
+                      gru_int8,            & ! x%gru(:)%var(:)     (i8b)
                       gru_double,          & ! x%gru(:)%var(:)     (dp)
                       gru_intVec,          & ! x%gru(:)%var(:)%dat (i4b)
                       gru_doubleVec,       & ! x%gru(:)%var(:)%dat (dp)
@@ -65,11 +65,13 @@ module fileAccess_writeOutput
                       gru_hru_intVec,      & ! x%gru(:)%hru(:)%var(:)%dat (i4b)
                       gru_hru_doubleVec      ! x%gru(:)%hru(:)%var(:)%dat (dp)
   USE actor_data_types,only:&
-                      time_dlength,          & ! var(:)%tim(:)%dat (dp)
-                      time_i,                &
-                      gru_hru_time_double,   &
-                      gru_hru_time_doubleVec,&
-                      gru_hru_time_intVec
+                      time_dlength,          & ! var(:)%tim(:)%dat                 (dp)
+                      time_i,                & ! var(:)%tim(:)                     (i4b)
+                      gru_hru_time_double,   & ! x%gru(:)%hru(:)%var(:)%tim(:)%dat (dp)
+                      gru_hru_time_doubleVec,& ! x%gru(:)%hru(:)%var(:)%tim(:)%dat (dp)
+                      gru_hru_time_intVec   ,& ! x%gru(:)%hru(:)%var(:)%tim(:)%dat (i4b)
+                      gru_time_doubleVec    ,& ! x%gru(:)%var(:)%tim(:)%dat        (dp)
+                      gru_time_intVec          ! x%gru(:)%var(:)%tim(:)%dat        (i4b)
   ! vector lengths
   USE var_lookup, only: maxvarFreq ! number of output frequencies
   USE var_lookup, only: maxvarStat ! number of statistics
@@ -563,7 +565,7 @@ subroutine writeScalar(ncid, outputTimestep, outputTimestepUpdate, nSteps, minGR
 
   ! loop thru GRUs and HRUs and time
   do iGRU = minGRU, maxGRU
-    hruLoop do iHRU = 1, size(gru_struc(iGRU)%hruInfo)
+    hruLoop: do iHRU = 1, size(gru_struc(iGRU)%hruInfo)
       hruCounter = hruCounter + 1
       stepCounter = 0
       do iStep = 1, nSteps
