@@ -113,14 +113,6 @@ module actor_data_types
     type(hru_time_intVec),allocatable    :: gru(:)
   endtype gru_hru_time_intVec
 
-  type, public :: gru_time_doubleVec
-    type(var_time_dlength),allocatable :: gru(:)
-  endtype gru_time_doubleVec
-
-  type, public :: gru_time_intVec
-    type(var_time_ilength),allocatable    :: gru(:)
-  endtype gru_time_intVec
-
   type, public :: hru_type
     type(zLookup),pointer                      :: lookupStruct               ! z(:)%var(:)%lookup(:) -- lookup tables
     type(var_dlength),pointer                  :: forcStat                   ! model forcing data

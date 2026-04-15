@@ -5,18 +5,29 @@ module output_buffer_write
   USE netcdf_util_module,only:netcdf_err  ! netcdf error handling function
   ! top-level data types
   USE nr_type
-  USE globalData,only: integerMissing, realMissing
+  USE globalData,only:integerMissing, realMissing
 
   USE globalData,only:gru_struc  ! gru->hru mapping structure
   
   USE output_buffer,only:summa_struct
   USE output_buffer,only:outputTimeStep
 
-  USE data_types
-  USE actor_data_types
+  ! provide access to the derived types to define the data structures
+  USE data_types,only:&
+                      var_i,               & ! x%var(:)                   (i4b)
+                      var_i8,              & ! x%var(:)                   integer(8)
+                      var_d,               & ! x%var(:)                   (dp)
+                      var_ilength,         & ! x%var(:)%dat               (i4b)
+                      var_dlength,         & ! x%var(:)%dat               (dp)
+                      gru_hru_doubleVec,   & ! x%gru(:)%hru(:)%var(:)%dat (dp)
+                      gru_hru_intVec         ! x%gru(:)%hru(:)%var(:)%dat (i4b)
+         
+
+  USE actor_data_types,only:time_i           ! var(:)%tim(:)              (i4b)
+
   ! vector lengths
-  USE var_lookup, only: maxvarFreq ! number of output frequencies
-  USE var_lookup, only: maxvarStat ! number of statistics
+  USE var_lookup,only:maxvarFreq ! number of output frequencies
+  USE var_lookup,only:maxvarStat ! number of statistics
   ! output constraints
   USE globalData,only:maxSnowLayers       ! maximum number of snow layers
   USE globalData,only:maxSoilLayers       ! maximum number of soil layers
@@ -137,32 +148,32 @@ subroutine f_writeOutputDA(handle_ncid, output_step, start_gru, max_gru, &
   do iStruct=1,size(structInfo)
     select case(trim(structInfo(iStruct)%structName))
       case('forc')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),maxLengthAll,output_step,&
+        call writeData(.false., ncid,outputTimeStep(start_gru)%dat(:),maxLengthAll,output_step,&
                         start_gru, max_gru, num_gru, & 
                         forc_meta,summa_struct(1)%forcStat,summa_struct(1)%forcStruct,'forc', &
                         forcChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('prog')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),maxLengthAll,output_step,&
+        call writeData(.false., ncid,outputTimeStep(start_gru)%dat(:),maxLengthAll,output_step,&
                         start_gru, max_gru, num_gru, &
                         prog_meta,summa_struct(1)%progStat,summa_struct(1)%progStruct,'prog', &
                         progChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('diag')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),maxLengthAll,output_step,&
+        call writeData(.false., ncid,outputTimeStep(start_gru)%dat(:),maxLengthAll,output_step,&
                         start_gru, max_gru, num_gru, &
                         diag_meta,summa_struct(1)%diagStat,summa_struct(1)%diagStruct,'diag', &
                         diagChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('flux')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),maxLengthAll,output_step,&
+        call writeData(.false., ncid,outputTimeStep(start_gru)%dat(:),maxLengthAll,output_step,&
                         start_gru, max_gru, num_gru, &
                         flux_meta,summa_struct(1)%fluxStat,summa_struct(1)%fluxStruct,'flux', &
                         fluxChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('indx')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),maxLengthAll,output_step,&
+        call writeData(.false., ncid,outputTimeStep(start_gru)%dat(:),maxLengthAll,output_step,&
                         start_gru, max_gru, num_gru, &
                         indx_meta,summa_struct(1)%indxStat,summa_struct(1)%indxStruct,'indx', &
                         indxChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('bvar')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),maxLengthAll,output_step,&
+        call writeData(.true., ncid,outputTimeStep(start_gru)%dat(:),maxLengthAll,output_step,&
                         start_gru, max_gru, num_gru, &
                         bvar_meta,summa_struct(1)%bvarStat,summa_struct(1)%bvarStruct,'bvar', &
                         bvarChild_map,summa_struct(1)%indxStruct,err,cmessage)
@@ -287,7 +298,7 @@ end subroutine writeTime
 ! **************************************************************************************
 ! public subroutine writeData: write model time-dependent data
 ! **************************************************************************************
-subroutine writeData(ncid,outputTimestep,maxLengthAll,output_step,&
+subroutine writeData(isBvar, ncid,outputTimestep,maxLengthAll,output_step,&
                      minGRU, maxGRU, numGRU, meta,stat,datt,structName,map,indx,&
                      err,message)
   USE data_types,only:var_info                       ! metadata type
@@ -301,6 +312,7 @@ subroutine writeData(ncid,outputTimestep,maxLengthAll,output_step,&
 
   implicit none
   ! declare dummy variables
+  logical(lgt),intent(in)          :: isBvar            ! flag for bvar
   type(var_i)   ,intent(in)        :: ncid              ! file ids
   integer(i4b)  ,intent(inout)     :: outputTimestep(:) ! output time step
   integer(i4b)  ,intent(in)        :: maxLengthAll      ! maxLength all data
@@ -380,11 +392,11 @@ subroutine writeData(ncid,outputTimestep,maxLengthAll,output_step,&
 
       ! stats output: only scalar variable type
       if(meta(iVar)%varType==iLookVarType%scalarv) then
-        call writeScalar(ncid, outputTimeStep, output_step, &
+        call writeScalar(isBvar, ncid, outputTimeStep, output_step, &
                          minGRU, maxGRU, nHRUrun, iFreq, iVar, meta, stat,   &
                          map, err, cmessage)
       else ! non-scalar variables: regular data structures
-        call writeVector(ncid, outputTimeStep, maxLengthAll, output_step, minGRU, &
+        call writeVector(isBvar, ncid, outputTimeStep, maxLengthAll, output_step, minGRU, &
                          maxGRU, nHRUrun, iFreq, iVar, meta, datt, indx,   &
                          err, cmessage)
       end if 
@@ -398,12 +410,13 @@ end subroutine writeData
 ! **********************************************************************************************************
 ! private subroutine writeScalar: write scalar variables from data structures 
 ! **********************************************************************************************************
-subroutine writeScalar(ncid, outputTimestep, output_step, minGRU, maxGRU, &
+subroutine writeScalar(isBvar, ncid, outputTimestep, output_step, minGRU, maxGRU, &
   nHRUrun, iFreq, iVar, meta, stat, map, err, message)
   USE data_types,only:var_info                       ! metadata type
   USE, intrinsic :: ieee_arithmetic
   implicit none
   ! declare dummy variables
+  logical(lgt)  ,intent(in)         :: isBvar              ! flag to indicate if we are writing bvar data, which has a different structure than the other data structures
   type(var_i)   ,intent(in)         :: ncid                ! fileid
   integer(i4b)  ,intent(inout)      :: outputTimestep(:)   ! output time step
   integer(i4b)  ,intent(in)         :: output_step         ! index in output_buffer
@@ -427,44 +440,39 @@ subroutine writeScalar(ncid, outputTimestep, output_step, minGRU, maxGRU, &
   err=0; message="writeScalar/"
 
   ! initialize the data vectors
-  select type (stat)
-   class is (gru_hru_doubleVec); nSpace = nHRUrun; realVec(:,:) = realMissing; dataType=ixReal
-   class is (gru_doubleVec);     nSpace =  maxGRU - minGRU + 1 ; realVec(:,:) = realMissing; dataType=ixReal
-    class default; message=trim(message)//'stats must be scalarv and of type gru_hru_doubleVec or gru_doubleVec'; err=20; return;err=20; return
-  end select
+  realVec = realMissing
+  nSpace = nHRUrun
+  if(isBvar) nSpace =  maxGRU - minGRU + 1 ! for bvar we have one value per GRU, not one value per HRU
 
   ! loop thru GRUs and HRUs
   do iGRU = minGRU, maxGRU
-    do iHRU = 1, size(gru_struc(iGRU)%hruInfo)
-     hruCounter = hruCounter + 1
-     if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(output_step)%dat(iFreq)) cycle
-
-     select type(stat)
-       class is (gru_hru_time_doubleVec); realVec(hruCounter, 1) = stat%gru(iGRU)%hru(iHRU)%var(map(iVar))%tim(output_step)%dat(iFreq)
-       class is (gru_time_doubleVec); realVec(iGRU, 1) = stat%gru(iGRU)%var(map(iVar))%tim(output_step)%dat(iFreq); exit ! only need to get the GRU-level data once
-     end select  ! stat
-
+    do iHRU = 1, gru_struc(iGRU)%hruCount
+      hruCounter = hruCounter + 1  ! will be iGRU if bvar
+      if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(output_step)%dat(iFreq)) cycle
+      realVec(hruCounter, 1) = stat%gru(iGRU)%hru(iHRU)%var(map(iVar))%tim(output_step)%dat(iFreq)
+      if(isBvar .and. iHRU==1) exit ! only need to get the GRU-level data once
     end do ! iHRU
   end do ! iGRU   
 
   ! write the data vectors
-  select case (dataType)
-    case (ixReal);  err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq), &
+  err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq), &
                           realVec(1:nSpace, 1),                        &
                           start=(/minGRU,outputTimestep(iFreq)/),      & 
                           count=(/nSpace,1/))
-  end select
 end subroutine writeScalar
 
 ! **********************************************************************************************************
 ! private subroutine writeVector: write vector variables from data structures 
 ! **********************************************************************************************************
-subroutine writeVector(ncid, outputTimestep, maxLengthAll, output_step, minGRU, maxGRU, &
+subroutine writeVector(isBvar, ncid, outputTimestep, maxLengthAll, output_step, minGRU, maxGRU, &
   nHRUrun, iFreq, iVar, meta, datt, indx, err, message)
   USE data_types,only:var_info                       ! metadata type
   USE var_lookup,only:iLookIndex                     ! index into index structure
   USE var_lookup,only:iLookVarType                   ! index into type structure
   implicit none
+
+  ! declare dummy variables
+  logical(lgt)  ,intent(in)             :: isBvar            ! flag to indicate if we are writing bvar data, which has a different structure than the other data structures
   type(var_i)   ,intent(in)             :: ncid              ! fileid
   integer(i4b)  ,intent(inout)          :: outputTimestep(:) ! output time step
   integer(i4b)  ,intent(in)             :: maxLengthAll      ! maxLength all data
@@ -497,61 +505,62 @@ subroutine writeVector(ncid, outputTimestep, maxLengthAll, output_step, minGRU, 
   integer(i4b)                          :: intArray(nHRUrun,maxLengthAll)  ! integer array for all HRUs in the run domain
   err=0; message="writeVector/"
 
+  ! set the number of spatial points to write
+  nSpace = nHRUrun
+  if(isBvar) nSpace = maxGRU - minGRU + 1 ! for bvar we have one value per GRU, not one value per HRU
+
   ! initialize the data vectors
   select type (datt)
-    class is (gru_hru_time_doubleVec); nSpace = nHRUrun; realArray(:,:) = realMissing;    dataType=ixReal
-    class is (gru_hru_time_intVec);    nSpace = nHRUrun;  intArray(:,:) = integerMissing; dataType=ixInteger
-    class is (gru_time_doubleVec);     nSpace = nGRUrun; realArray(:,:) = realMissing;    dataType=ixReal
-    class is (gru_time_intVec);        nSpace = nGRUrun;  intArray(:,:) = integerMissing; dataType=ixInteger
-    class default; message=trim(message)//'data is not scalarv so should be either of type gru_hru_[double or int]Vec or gru_[double or int]Vec';err=20; return
-   end select
+    class is (gru_hru_doubleVec); realArray(:,:) = realMissing;    dataType=ixReal
+    class is (gru_hru_intVec);     intArray(:,:) = integerMissing; dataType=ixInteger
+    class default; message=trim(message)//'data is not scalarv so should be either of type gru_hru_[double or int]Vec';err=20; return
+  end select
 
-   ! loop thru GRUs and HRUs
-   do iGRU=1,size(gru_struc)
-     do iHRU=1,gru_struc(iGRU)%hruCount
-       hruCounter = hruCounter + 1
-       if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(output_step)%dat(iFreq)) cycle
+  ! loop thru GRUs and HRUs
+  do iGRU = minGRU, maxGRU
+    do iHRU=1,gru_struc(iGRU)%hruCount
+      hruCounter = hruCounter + 1  ! will be iGRU if bvar
+      if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(output_step)%dat(iFreq)) cycle
 
-       ! get the model layers
-       nSoil   = indx%gru(iGRU)%hru(iHRU)%var(iLookIndex%nSoil)%tim(output_step)%dat(1)
-       nSnow   = indx%gru(iGRU)%hru(iHRU)%var(iLookIndex%nSnow)%tim(output_step)%dat(1)
-       nLayers = indx%gru(iGRU)%hru(iHRU)%var(iLookIndex%nLayers)%tim(output_step)%dat(1)
+      ! get the model layers
+      nSoil   = indx%gru(iGRU)%hru(iHRU)%var(iLookIndex%nSoil)%tim(output_step)%dat(1)
+      nSnow   = indx%gru(iGRU)%hru(iHRU)%var(iLookIndex%nSnow)%tim(output_step)%dat(1)
+      nLayers = indx%gru(iGRU)%hru(iHRU)%var(iLookIndex%nLayers)%tim(output_step)%dat(1)
 
-       select case (meta(iVar)%varType)
-         case(iLookVarType%wLength); datLength = nSpecBand
-         case(iLookVarType%midToto); datLength = nLayers
-         case(iLookVarType%midSnow); datLength = nSnow
-         case(iLookVarType%midSoil); datLength = nSoil
-         case(iLookVarType%ifcToto); datLength = nLayers+1
-         case(iLookVarType%ifcSnow); datLength = nSnow+1
-         case(iLookVarType%ifcSoil); datLength = nSoil+1
-         case(iLookVarType%routing); datLength = nTimeDelay
-         case default; return ! if not a vector variable type, skip to next variable
-       end select ! varType
+      select case (meta(iVar)%varType)
+        case(iLookVarType%wLength); datLength = nSpecBand
+        case(iLookVarType%midToto); datLength = nLayers
+        case(iLookVarType%midSnow); datLength = nSnow
+        case(iLookVarType%midSoil); datLength = nSoil
+        case(iLookVarType%ifcToto); datLength = nLayers+1
+        case(iLookVarType%ifcSnow); datLength = nSnow+1
+        case(iLookVarType%ifcSoil); datLength = nSoil+1
+        case(iLookVarType%routing); datLength = nTimeDelay
+        case default; return ! if not a vector variable type, skip to next variable
+      end select ! varType
 
       ! get the data vectors
       select type (datt)
-        class is (gru_hru_doubleVec); realArray(hruCounter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(output_step)%dat(:)
-        class is (gru_hru_intVec);     intArray(hruCounter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(output_step)%dat(:)
-        class is (gru_doubleVec); realArray(iGRU,1:datLength) = datt%gru(iGRU)%var(iVar)%tim(output_step)%dat(:); exit ! only need to get the GRU-level data once
-        class is (gru_intVec);     intArray(iGRU,1:datLength) = datt%gru(iGRU)%var(iVar)%tim(output_step)%dat(:); exit ! only need to get the GRU-level data once
+        class is (gru_hru_doubleVec); realArray(hruCounter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(output_step)%dat(1:datLength)
+        class is (gru_hru_intVec);     intArray(hruCounter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(output_step)%dat(1:datLength)
       end select
+      if (isBvar .and. iHRU == 1)exit ! for bvar we have one value per GRU, not one value per HRU, so only get the data for the first HRU in each GRU
 
-     end do  ! HRU loop
-    end do  ! GRU loop
+    end do  ! HRU loop
+   end do  ! GRU loop
 
-    ! get the maximum length of each data vector
-    select case (meta(iVar)%varType)
-      case(iLookVarType%wLength); maxLength = nSpecBand
-      case(iLookVarType%midToto); maxLength = maxLayers
-      case(iLookVarType%midSnow); maxLength = maxSnowLayers
-      case(iLookVarType%midSoil); maxLength = maxSoilLayers
-      case(iLookVarType%ifcToto); maxLength = maxLayers+1
-      case(iLookVarType%ifcSnow); maxLength = maxSnowLayers+1
-      case(iLookVarType%ifcSoil); maxLength = maxSoilLayers+1
-      case(iLookVarType%routing); maxLength = nTimeDelay
-      case default; return ! if not a vector variable type, skip to next variable
-    end select ! varType
+   ! get the maximum length of each data vector
+   select case (meta(iVar)%varType)
+     case(iLookVarType%wLength); maxLength = nSpecBand
+     case(iLookVarType%midToto); maxLength = maxLayers
+     case(iLookVarType%midSnow); maxLength = maxSnowLayers
+     case(iLookVarType%midSoil); maxLength = maxSoilLayers
+     case(iLookVarType%ifcToto); maxLength = maxLayers+1
+     case(iLookVarType%ifcSnow); maxLength = maxSnowLayers+1
+     case(iLookVarType%ifcSoil); maxLength = maxSoilLayers+1
+     case(iLookVarType%routing); maxLength = nTimeDelay
+     case default; return ! if not a vector variable type, skip to next variable
+   end select ! varType
 
   ! write the data vectors
   select case(dataType)

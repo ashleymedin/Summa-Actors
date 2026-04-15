@@ -376,7 +376,7 @@ subroutine writeParam(indxGRU,indxHRU,struct,meta,structName,err,message)
     select type (struct)
       class is (var_i)
        if (structName == "type") summa_struct(1)%typeStruct%gru(indxGRU)%hru(indxHRU)%var(iVar) = struct%var(iVar)
-      class is (var_i8)
+      class is (var_i8) ! "id", but do not write here
       class is (var_d)
        if (structName == "attr") summa_struct(1)%attrStruct%gru(indxGRU)%hru(indxHRU)%var(iVar) = struct%var(iVar)
        if (structName == "bpar") summa_struct(1)%bparStruct%gru(indxGRU)%var(iVar) = struct%var(iVar) ! this will overwrite data
@@ -479,7 +479,7 @@ subroutine writeData(indxGRU,indxHRU,iStep,maxLengthAll,structName,finalizeStats
             case('diag'); summa_struct(1)%diagStat%gru(indxGRU)%hru(indxHRU)%var(map(iVar))%tim(iStep)%dat(iFreq) = stat%var(map(iVar))%dat(iFreq)
             case('flux'); summa_struct(1)%fluxStat%gru(indxGRU)%hru(indxHRU)%var(map(iVar))%tim(iStep)%dat(iFreq) = stat%var(map(iVar))%dat(iFreq)
             case('indx'); summa_struct(1)%indxStat%gru(indxGRU)%hru(indxHRU)%var(map(iVar))%tim(iStep)%dat(iFreq) = stat%var(map(iVar))%dat(iFreq)
-            case('bvar'); summa_struct(1)%bvarStat%gru(indxGRU)%var(map(iVar))%tim(iStep)%dat(iFreq)              = stat%var(map(iVar))%dat(iFreq)
+            case('bvar'); summa_struct(1)%bvarStat%gru(indxGRU)%hru(indxHRU)%var(map(iVar))%tim(iStep)%dat(iFreq) = stat%var(map(iVar))%dat(iFreq)
             case default; err=21; message=trim(message)//"stats structure not found"; return
             end select
           class default; err=20; message=trim(message)//'stats must be scalarv and of type gru_hru_doubleVec or gru_doubleVec'; return
@@ -518,7 +518,7 @@ subroutine writeData(indxGRU,indxHRU,iStep,maxLengthAll,structName,finalizeStats
               case('prog'); summa_struct(1)%progStruct%gru(indxGRU)%hru(indxHRU)%var(iVar)%tim(iStep)%dat(1:datLength) = datt%var(iVar)%dat(:)
               case('diag'); summa_struct(1)%diagStruct%gru(indxGRU)%hru(indxHRU)%var(iVar)%tim(iStep)%dat(1:datLength) = datt%var(iVar)%dat(:)
               case('flux'); summa_struct(1)%fluxStruct%gru(indxGRU)%hru(indxHRU)%var(iVar)%tim(iStep)%dat(1:datLength) = datt%var(iVar)%dat(:)
-              case('bvar'); summa_struct(1)%bvarStruct%gru(indxGRU)%var(iVar)%tim(iStep)%dat(1:datLength)              = datt%var(iVar)%dat(:)
+              case('bvar'); summa_struct(1)%bvarStruct%gru(indxGRU)%hru(indxHRU)%var(iVar)%tim(iStep)%dat(1:datLength) = datt%var(iVar)%dat(:)
               ! note, 'forc' data structure only has scalar variables, and thus is covered above in the stats output section 
               case default; err=21; message=trim(message)//'data structure not found for var_dlength output'
             end select

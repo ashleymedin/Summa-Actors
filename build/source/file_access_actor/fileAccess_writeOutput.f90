@@ -40,38 +40,16 @@ module fileAccess_writeOutput
   USE output_buffer,only:outputTimeStep
   ! provide access to the derived types to define the data structures
   USE data_types,only:&
-                      ! final data vectors
-                      dlength,             & ! var%dat
-                      ilength,             & ! var%dat
-                      ! no spatial dimension
                       var_i,               & ! x%var(:)            (i4b)
                       var_i8,              & ! x%var(:)            integer(8)
                       var_d,               & ! x%var(:)            (dp)
                       var_ilength,         & ! x%var(:)%dat        (i4b)
-                      var_dlength,         & ! x%var(:)%dat        (dp)
-                      ! no variable dimension
-                      hru_i,               & ! x%hru(:)            (i4b)
-                      hru_d,               & ! x%hru(:)            (dp)
-                      ! gru dimension
-                      gru_int,             & ! x%gru(:)%var(:)     (i4b)
-                      gru_int8,            & ! x%gru(:)%var(:)     (i8b)
-                      gru_double,          & ! x%gru(:)%var(:)     (dp)
-                      gru_intVec,          & ! x%gru(:)%var(:)%dat (i4b)
-                      gru_doubleVec,       & ! x%gru(:)%var(:)%dat (dp)
-                      ! gru+hru dimension
-                      gru_hru_int,         & ! x%gru(:)%hru(:)%var(:)     (i4b)
-                      gru_hru_int8,        & ! x%gru(:)%hru(:)%var(:)     integer(8)
-                      gru_hru_double,      & ! x%gru(:)%hru(:)%var(:)     (dp)
-                      gru_hru_intVec,      & ! x%gru(:)%hru(:)%var(:)%dat (i4b)
-                      gru_hru_doubleVec      ! x%gru(:)%hru(:)%var(:)%dat (dp)
+                      var_dlength            ! x%var(:)%dat        (dp)
+
   USE actor_data_types,only:&
-                      time_dlength,          & ! var(:)%tim(:)%dat                 (dp)
                       time_i,                & ! var(:)%tim(:)                     (i4b)
-                      gru_hru_time_double,   & ! x%gru(:)%hru(:)%var(:)%tim(:)%dat (dp)
                       gru_hru_time_doubleVec,& ! x%gru(:)%hru(:)%var(:)%tim(:)%dat (dp)
-                      gru_hru_time_intVec   ,& ! x%gru(:)%hru(:)%var(:)%tim(:)%dat (i4b)
-                      gru_time_doubleVec    ,& ! x%gru(:)%var(:)%tim(:)%dat        (dp)
-                      gru_time_intVec          ! x%gru(:)%var(:)%tim(:)%dat        (i4b)
+                      gru_hru_time_intVec      ! x%gru(:)%hru(:)%var(:)%tim(:)%dat (i4b)
   ! vector lengths
   USE var_lookup, only: maxvarFreq ! number of output frequencies
   USE var_lookup, only: maxvarStat ! number of statistics
@@ -185,32 +163,32 @@ subroutine writeOutput_fortran(handle_ncid, num_steps, start_gru, max_gru, &
   do iStruct=1,size(structInfo)
     select case(trim(structInfo(iStruct)%structName))
       case('forc')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,maxLengthAll, &
+        call writeData(.false.,ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,maxLengthAll, &
                         num_steps,start_gru, max_gru, numGRU, & 
                         forc_meta,summa_struct(1)%forcStat,summa_struct(1)%forcStruct,'forc', &
                         forcChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('prog')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,maxLengthAll,&
+        call writeData(.false.,ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,maxLengthAll,&
                         num_steps,start_gru, max_gru, numGRU, &
                         prog_meta,summa_struct(1)%progStat,summa_struct(1)%progStruct,'prog', &
                         progChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('diag')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,maxLengthAll,&
+        call writeData(.false.,ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,maxLengthAll,&
                         num_steps,start_gru, max_gru, numGRU, &
                         diag_meta,summa_struct(1)%diagStat,summa_struct(1)%diagStruct,'diag', &
                         diagChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('flux')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,maxLengthAll,&
+        call writeData(.false.,ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,maxLengthAll,&
                         num_steps,start_gru, max_gru, numGRU, &
                         flux_meta,summa_struct(1)%fluxStat,summa_struct(1)%fluxStruct,'flux', &
                         fluxChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('indx')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,maxLengthAll,&
+        call writeData(.false.,ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,maxLengthAll,&
                         num_steps,start_gru, max_gru, numGRU, &
                         indx_meta,summa_struct(1)%indxStat,summa_struct(1)%indxStruct,'indx', &
                         indxChild_map,summa_struct(1)%indxStruct,err,cmessage)
       case('bvar')
-        call writeData(ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,maxLengthAll,&
+        call writeData(.true.,ncid,outputTimeStep(start_gru)%dat(:),outputTimestepUpdate,maxLengthAll,&
                         num_steps,start_gru, max_gru, numGRU, &
                         bvar_meta,summa_struct(1)%bvarStat,summa_struct(1)%bvarStruct,'bvar', &
                         bvarChild_map,summa_struct(1)%indxStruct,err,cmessage)
@@ -363,7 +341,7 @@ end subroutine writeParam
 ! **************************************************************************************
 ! public subroutine writeData: write model time-dependent data
 ! **************************************************************************************
-subroutine writeData(ncid,outputTimestep,outputTimestepUpdate,maxLengthAll, nSteps, &
+subroutine writeData(isBvar, ncid,outputTimestep,outputTimestepUpdate,maxLengthAll, nSteps, &
             minGRU, maxGRU, numGRU, & 
             meta,stat,datt,structName,map,indx,err,message)
   USE data_types,only:var_info                       ! metadata type
@@ -377,6 +355,7 @@ subroutine writeData(ncid,outputTimestep,outputTimestepUpdate,maxLengthAll, nSte
 
   implicit none
   ! declare dummy variables
+  logical(lgt)  ,intent(in)        :: isBvar            ! flag to indicate if we are writing bvar data, which has a different structure than the other data structures
   type(var_i)   ,intent(in)        :: ncid              ! file ids
   integer(i4b)  ,intent(inout)     :: outputTimestep(:) ! output time step
   integer(i4b)  ,intent(inout)     :: outputTimestepUpdate(:) ! number of HRUs in the run domain
@@ -449,11 +428,11 @@ subroutine writeData(ncid,outputTimestep,outputTimestepUpdate,maxLengthAll, nSte
 
       ! stats output: only scalar variable type
       if(meta(iVar)%varType==iLookVarType%scalarv) then
-        call writeScalar(ncid, outputTimeStep, outputTimeStepUpdate, nSteps, &
+        call writeScalar(isBvar, ncid, outputTimeStep, outputTimeStepUpdate, nSteps, &
                          minGRU, maxGRU, nHRUrun, iFreq, iVar, meta, stat,   &
                          map, err, cmessage)
       else ! non-scalar variables: regular data structures
-        call writeVector(ncid, outputTimeStep, maxLengthAll, nSteps, minGRU, &
+        call writeVector(isBvar, ncid, outputTimeStep, maxLengthAll, nSteps, minGRU, &
                          maxGRU, nHRUrun, iFreq, iVar, meta, datt, indx,   &
                          err, cmessage)
       end if ! not scalarv
@@ -523,12 +502,13 @@ end subroutine writeForcTime
 ! **********************************************************************************************************
 ! private subroutine writeScalar: write scalar variables from data structures 
 ! **********************************************************************************************************
-subroutine writeScalar(ncid, outputTimestep, outputTimestepUpdate, nSteps, minGRU, maxGRU, &
+subroutine writeScalar(isBvar, ncid, outputTimestep, outputTimestepUpdate, nSteps, minGRU, maxGRU, &
   nHRUrun, iFreq, iVar, meta, stat, map, err, message)
   USE data_types,only:var_info                       ! metadata type
   USE, intrinsic :: ieee_arithmetic
   implicit none
   ! declare dummy variables
+  logical(lgt)  ,intent(in)         :: isBvar                  ! flag to indicate if we are writing bvar data, which has a different structure than the other data structures
   type(var_i)   ,intent(in)         :: ncid                    ! fileid
   integer(i4b)  ,intent(inout)      :: outputTimestep(:)       ! output time step
   integer(i4b)  ,intent(inout)      :: outputTimestepUpdate(:) ! number of HRUs in the run domain
@@ -557,26 +537,19 @@ subroutine writeScalar(ncid, outputTimestep, outputTimestepUpdate, nSteps, minGR
   err=0; message="writeScalar/"
 
   ! initialize the data vectors
-  select type (stat)
-   class is (gru_hru_doubleVec); nSpace = nHRUrun; realVec(:,:) = realMissing; dataType=ixReal
-   class is (gru_doubleVec);     nSpace =  maxGRU - minGRU + 1 ; realVec(:,:) = realMissing; dataType=ixReal
-    class default; message=trim(message)//'stats must be scalarv and of type gru_hru_doubleVec or gru_doubleVec'; err=20; return;err=20; return
-  end select
+  realVec = realMissing
+  nSpace = nHRUrun
+  if(isBvar) nSpace =  maxGRU - minGRU + 1 ! for bvar we have one value per GRU, not one value per HRU
 
   ! loop thru GRUs and HRUs and time
   do iGRU = minGRU, maxGRU
-    hruLoop: do iHRU = 1, size(gru_struc(iGRU)%hruInfo)
-      hruCounter = hruCounter + 1
+    do iHRU = 1, gru_struc(iGRU)%hruCount
+      hruCounter = hruCounter + 1  ! will be iGRU if bvar
       stepCounter = 0
       do iStep = 1, nSteps
         if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(iStep)%dat(iFreq)) cycle
         stepCounter = stepCounter + 1
-
-        select type(stat)
-          class is (gru_hru_time_doubleVec); val = stat%gru(iGRU)%hru(iHRU)%var(map(iVar))%tim(iStep)%dat(iFreq)
-          class is (gru_time_doubleVec); val = stat%gru(iGRU)%var(map(iVar))%tim(iStep)%dat(iFreq)
-        end select
-
+        val = stat%gru(iGRU)%hru(iHRU)%var(map(iVar))%tim(iStep)%dat(iFreq)
         ! Handle missing values
         if (ieee_is_nan(val)) then
           val = realMissing
@@ -587,49 +560,45 @@ subroutine writeScalar(ncid, outputTimestep, outputTimestepUpdate, nSteps, minGR
           val = realMissing
         end if
         outputTimeStepUpdate(iFreq) = stepCounter
-
-        select type(stat)
-          class is (gru_hru_time_doubleVec); realVec(hruCounter, stepCounter) = val
-          class is (gru_time_doubleVec); realVec(iGRU, stepCounter) = val; if(iStep==nSteps) exit hruLoop ! only need to get the GRU-level data once
-        end select
-
-    end do ! iStep
-    ! We need to output the farthest time step achieved within the batch
-    if (stepCounter .gt. maxStepCounter) maxStepCounter = stepCounter
-
-  end do hruLoop ! iHRU
-end do ! iGRU
-
-! write the data vectors
-select case (dataType)
-  case (ixReal); err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq),&
-                       realVec(1:nSpace, 1:stepCounter),    &
-                       start=(/minGRU,outputTimestep(iFreq)/),   & 
-                       count=(/nSpace,maxStepCounter/))
-end select
-
-if(err/=0)then
-  print*, trim(nf90_strerror(err))
-  print *, "Variable: ", trim(meta(iVar)%varName)
-  print*,iFreq,meta(iVar)%ncVarID(iFreq),ncid%var(iFreq),minGRU
-  print*,outputTimestep(iFreq),stepCounter,nSteps
-  print*,size(gru_struc(iGRU)%hruInfo),nHRUrun,nSpace
-  ! Print size and mean of realVec
-  print *, "Size of realVec: ", size(realVec)
-  print *, "Mean of realVec: ", sum(realVec(1:nSpace, 1:stepCounter)) / (nSpace * stepCounter)
-endif
+        realVec(hruCounter, stepCounter) = val
+      end do ! iStep
+      ! We need to output the farthest time step achieved within the batch
+      if (stepCounter .gt. maxStepCounter) maxStepCounter = stepCounter
+      if(isBvar .and. iHRU==1) exit ! only need to get the GRU-level data once
+    end do ! iHRU
+  end do ! iGRU
+  
+  ! write the data vectors
+  err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq),&
+                         realVec(1:nSpace, 1:stepCounter),    &
+                         start=(/minGRU,outputTimestep(iFreq)/),   & 
+                         count=(/nSpace,maxStepCounter/))
+  
+  if(err/=0)then
+    print*, trim(nf90_strerror(err))
+    print *, "Variable: ", trim(meta(iVar)%varName)
+    print*,iFreq,meta(iVar)%ncVarID(iFreq),ncid%var(iFreq),minGRU
+    print*,outputTimestep(iFreq),stepCounter,nSteps
+    print*,size(gru_struc(iGRU)%hruInfo),nHRUrun,nSpace
+    ! Print size and mean of realVec
+    print *, "Size of realVec: ", size(realVec)
+    print *, "Mean of realVec: ", sum(realVec(1:nSpace, 1:stepCounter)) / (nSpace * stepCounter)
+  endif
 
 end subroutine writeScalar
 
 ! **********************************************************************************************************
 ! private subroutine writeVector: write vector variables from data structures 
 ! **********************************************************************************************************
-subroutine writeVector(ncid, outputTimestep, maxLengthAll, nSteps, minGRU, maxGRU, &
+subroutine writeVector(isBvar, ncid, outputTimestep, maxLengthAll, nSteps, minGRU, maxGRU, &
   nHRUrun, iFreq, iVar, meta, datt, indx, err, message)
   USE data_types,only:var_info                       ! metadata type
   USE var_lookup,only:iLookIndex                     ! index into index structure
   USE var_lookup,only:iLookVarType                   ! index into type structure
   implicit none
+
+  ! declare dummy variables
+  logical(lgt)  ,intent(in)             :: isBvar            ! flag to indicate if we are writing bvar data, which has a different structure than the other data structures
   type(var_i)   ,intent(in)             :: ncid              ! fileid
   integer(i4b)  ,intent(inout)          :: outputTimestep(:) ! output time step
   integer(i4b)  ,intent(in)             :: maxLengthAll      ! maxLength all data
@@ -664,24 +633,26 @@ subroutine writeVector(ncid, outputTimestep, maxLengthAll, nSteps, minGRU, maxGR
   integer(i4b)                          :: intArray(nHRUrun,maxLengthAll)   ! integer array for all HRUs in the run domain
   err=0; message="writeVector/"
 
-   ! loop time
+  ! set the number of spatial points to write
+  nSpace = nHRUrun
+  if(isBvar) nSpace = maxGRU - minGRU + 1 ! for bvar we have one value per GRU, not one value per HRU
+
+  ! loop time
   stepCounter = outputTimeStep(iFreq)
   do iStep = 1, nSteps
     hruCounter = 0
     
     ! initialize the data vectors
     select type (datt)
-      class is (gru_hru_time_doubleVec); nSpace = nHRUrun; realArray(:,:) = realMissing;    dataType=ixReal
-      class is (gru_hru_time_intVec);    nSpace = nHRUrun;  intArray(:,:) = integerMissing; dataType=ixInteger
-      class is (gru_time_doubleVec);     nSpace = nGRUrun; realArray(:,:) = realMissing;    dataType=ixReal
-      class is (gru_time_intVec);        nSpace = nGRUrun;  intArray(:,:) = integerMissing; dataType=ixInteger
-      class default; message=trim(message)//'data is not scalarv so should be either of type gru_hru_[double or int]Vec or gru_[double or int]Vec';err=20; return
+      class is (gru_hru_time_doubleVec); realArray(:,:) = realMissing;    dataType=ixReal
+      class is (gru_hru_time_intVec);     intArray(:,:) = integerMissing; dataType=ixInteger
+      class default; message=trim(message)//'data is not scalarv so should be either of type gru_hru_time_[double or int]Vec';err=20; return
     end select
 
     ! loop thru GRUs and HRUs
-    do iGRU=1,size(gru_struc)
+    do iGRU = minGRU, maxGRU
       do iHRU=1,gru_struc(iGRU)%hruCount
-        hruCounter = hruCounter + 1
+        hruCounter = hruCounter + 1  ! will be iGRU if bvar
         if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(iStep)%dat(iFreq)) cycle
 
         ! get the model layers
@@ -703,11 +674,10 @@ subroutine writeVector(ncid, outputTimestep, maxLengthAll, nSteps, minGRU, maxGR
 
         ! get the data vectors
         select type (datt)
-          class is (gru_hru_time_doubleVec); realArray(hruCounter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(iStep)%dat(:)
-          class is (gru_hru_time_intVec);     intArray(hruCounter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(iStep)%dat(:)
-          class is (gru_time_doubleVec); realArray(hruCounter,1:datLength) = datt%gru(iGRU)%var(iVar)%tim(iStep)%dat(:); exit ! only need to get the GRU-level data once
-          class is (gru_time_intVec);     intArray(hruCounter,1:datLength) = datt%gru(iGRU)%var(iVar)%tim(iStep)%dat(:); exit ! only need to get the GRU-level data once
+          class is (gru_hru_time_doubleVec); realArray(hruCounter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(iStep)%dat(1:datLength)
+          class is (gru_hru_time_intVec);     intArray(hruCounter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(iStep)%dat(1:datLength)
         end select
+        if (isBvar .and. iHRU == 1)exit ! for bvar we have one value per GRU, not one value per HRU, so only get the data for the first HRU in each GRU
 
       end do  ! HRU loop
     end do  ! GRU loop        
