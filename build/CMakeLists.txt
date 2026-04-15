@@ -96,6 +96,7 @@ set(ENGINE_DIR ${F_MASTER}/build/summa/build/source/engine)
 set(HOOKUP_DIR ${F_MASTER}/build/summa/build/source/hookup)
 set(NETCDF_DIR ${F_MASTER}/build/summa/build/source/netcdf)
 set(NOAHMP_DIR ${F_MASTER}/build/summa/build/source/noah-mp)
+set(NUMREC_DIR ${F_MASTER}/build/summa/build/source/numrec)
 
 # Define Actors specific directories
 set(ACTORS_DIR      ${F_MASTER}/build/source)
