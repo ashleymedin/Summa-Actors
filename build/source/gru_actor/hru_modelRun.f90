@@ -343,5 +343,5 @@ end subroutine runPhysics
   
     ! If the global default tolerance flag is set, then override the specific tolerances 
   end subroutine set_sundials_tolerances
-
+#endif
 end module summa_modelRun
