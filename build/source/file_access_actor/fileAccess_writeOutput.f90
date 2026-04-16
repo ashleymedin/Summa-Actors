@@ -411,7 +411,7 @@ subroutine writeData(isBvar, ncid,outputTimestep,outputTimestepUpdate,maxLengthA
       ! Calculate the number of HRUs to write
       nHRUrun = 0
       do iGRU=minGRU, maxGRU
-        nHRUrun = nHRUrun + size(gru_struc(iGRU)%hruInfo)
+        nHRUrun = nHRUrun + gru_struc(iGRU)%hruCount
       end do ! iGRU
 
       ! define the statistics index
@@ -545,6 +545,11 @@ subroutine writeScalar(isBvar, ncid, outputTimestep, outputTimestepUpdate, nStep
       do iGRU = minGRU, maxGRU
         do iHRU = 1, gru_struc(iGRU)%hruCount
           hruCounter = hruCounter + 1  ! will be iGRU if bvar
+          if (hruCounter > nHRUrun) then
+            err = 20
+            message = trim(message)//'hruCounter exceeds nHRUrun in writeScalar'
+            return
+          end if
           stepCounter = 0
           do iStep = 1, nSteps
             if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(iStep)%dat(iFreq)) cycle
@@ -655,6 +660,11 @@ subroutine writeVector(isBvar, ncid, outputTimestep, maxLengthAll, nSteps, minGR
     do iGRU = minGRU, maxGRU
       do iHRU=1,gru_struc(iGRU)%hruCount
         hruCounter = hruCounter + 1  ! will be iGRU if bvar
+        if (hruCounter > nHRUrun) then
+          err = 20
+          message = trim(message)//'hruCounter exceeds nHRUrun in writeVector'
+          return
+        end if
         if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(iStep)%dat(iFreq)) cycle
 
         ! get the model layers
