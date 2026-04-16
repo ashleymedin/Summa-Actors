@@ -527,7 +527,7 @@ subroutine writeScalar(isBvar, ncid, outputTimestep, outputTimestepUpdate, nStep
   integer(i4b)                      :: stepCounter=0           ! counter for the realVec
   integer(i4b)                      :: maxStepCounter=0        ! counter for the realVec
   integer(i4b)                      :: iGRU,iHRU
-  real(rkind)                       :: nSpace                  ! number of spatial points to write
+  integer(i4b)                      :: nSpace                  ! number of spatial points to write
   ! output array
   real(rkind)                       :: realVec(nHRUrun, nSteps)! real vector for all HRUs in the run domain
   real(rkind)                       :: val

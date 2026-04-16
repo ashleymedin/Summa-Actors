@@ -383,7 +383,7 @@ subroutine writeScalar(isBvar, ncid, outputTimestep, output_step, minGRU, maxGRU
   ! local variables
   integer(i4b)                      :: hruCounter=0  
   integer(i4b)                      :: iGRU,iHRU
-  real(rkind)                       :: nSpace              ! number of spatial points to write
+  integer(i4b)                      :: nSpace              ! number of spatial points to write
   ! output array
   real(rkind)                       :: realVec(nHRUrun, 1) ! real vector max size for all HRUs in the run domain
 
