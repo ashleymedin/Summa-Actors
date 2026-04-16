@@ -12,17 +12,15 @@ module output_buffer_write
 
   ! provide access to the derived types to define the data structures
   USE data_types,only:&
-                      var_i,               & ! x%var(:)                   (i4b)
-                      var_i8,              & ! x%var(:)                   integer(8)
-                      var_d,               & ! x%var(:)                   (dp)
-                      var_ilength,         & ! x%var(:)%dat               (i4b)
-                      var_dlength,         & ! x%var(:)%dat               (dp)
-                      gru_hru_doubleVec,   & ! x%gru(:)%hru(:)%var(:)%dat (dp)
-                      gru_hru_intVec         ! x%gru(:)%hru(:)%var(:)%dat (i4b)
-         
+                      var_i,         & ! x%var(:)                   (i4b)
+                      var_i8,        & ! x%var(:)                   integer(8)
+                      var_d,         & ! x%var(:)                   (dp)
+                      var_ilength,   & ! x%var(:)%dat               (i4b)
+                      var_dlength    & ! x%var(:)%dat               (dp)         
 
-  USE actor_data_types,only:time_i,             & ! var(:)%tim(:)                     (i4b)
-                            gru_hru_time_intVec   ! x%gru(:)%hru(:)%var(:)%tim(:)%dat (i4b)
+  USE actor_data_types,only:time_i,                & ! var(:)%tim(:)                     (i4b)
+                            gru_hru_time_intVec,   & ! x%gru(:)%hru(:)%var(:)%tim(:)%dat (i4b)
+                            gru_hru_time_doubleVec   ! x%gru(:)%hru(:)%var(:)%tim(:)%dat (dp)
 
   ! vector lengths
   USE var_lookup,only:maxvarFreq ! number of output frequencies
@@ -519,9 +517,9 @@ subroutine writeVector(isBvar, ncid, outputTimestep, maxLengthAll, output_step, 
 
   ! initialize the data vectors
   select type (datt)
-    class is (gru_hru_doubleVec); realArray(:,:) = realMissing;    dataType=ixReal
-    class is (gru_hru_intVec);     intArray(:,:) = integerMissing; dataType=ixInteger
-    class default; message=trim(message)//'data is not scalarv so should be either of type gru_hru_[double or int]Vec';err=20; return
+    class is (gru_hru_time_doubleVec); realArray(:,:) = realMissing;    dataType=ixReal
+    class is (gru_hru_time_intVec);     intArray(:,:) = integerMissing; dataType=ixInteger
+    class default; message=trim(message)//'data is not scalarv so should be either of type gru_hru_time_[double or int]Vec';err=20; return
   end select
 
   ! loop thru GRUs and HRUs
@@ -549,8 +547,8 @@ subroutine writeVector(isBvar, ncid, outputTimestep, maxLengthAll, output_step, 
 
       ! get the data vectors
       select type (datt)
-        class is (gru_hru_doubleVec); realArray(hruCounter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(output_step)%dat(1:datLength)
-        class is (gru_hru_intVec);     intArray(hruCounter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(output_step)%dat(1:datLength)
+        class is (gru_hru_time_doubleVec); realArray(hruCounter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(output_step)%dat(1:datLength)
+        class is (gru_hru_time_intVec);     intArray(hruCounter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(output_step)%dat(1:datLength)
       end select
       if (isBvar .and. iHRU == 1)exit ! for bvar we have one value per GRU, not one value per HRU, so only get the data for the first HRU in each GRU
 

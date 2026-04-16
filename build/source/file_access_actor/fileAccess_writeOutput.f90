@@ -40,16 +40,16 @@ module fileAccess_writeOutput
   USE output_buffer,only:outputTimeStep
   ! provide access to the derived types to define the data structures
   USE data_types,only:&
-                      var_i,               & ! x%var(:)            (i4b)
-                      var_i8,              & ! x%var(:)            integer(8)
-                      var_d,               & ! x%var(:)            (dp)
-                      var_ilength,         & ! x%var(:)%dat        (i4b)
-                      var_dlength            ! x%var(:)%dat        (dp)
+                      var_i,            & ! x%var(:)            (i4b)
+                      var_i8,           & ! x%var(:)            integer(8)
+                      var_d,            & ! x%var(:)            (dp)
+                      var_ilength,      & ! x%var(:)%dat        (i4b)
+                      var_dlength         ! x%var(:)%dat        (dp)
 
-  USE actor_data_types,only:&
-                      time_i,                & ! var(:)%tim(:)                     (i4b)
-                      gru_hru_time_doubleVec,& ! x%gru(:)%hru(:)%var(:)%tim(:)%dat (dp)
-                      gru_hru_time_intVec      ! x%gru(:)%hru(:)%var(:)%tim(:)%dat (i4b)
+  USE actor_data_types,only:time_i,                & ! var(:)%tim(:)                     (i4b)
+                            gru_hru_time_intVec,   & ! x%gru(:)%hru(:)%var(:)%tim(:)%dat (i4b)
+                            gru_hru_time_doubleVec   ! x%gru(:)%hru(:)%var(:)%tim(:)%dat (dp)
+                            
   ! vector lengths
   USE var_lookup, only: maxvarFreq ! number of output frequencies
   USE var_lookup, only: maxvarStat ! number of statistics
@@ -223,7 +223,7 @@ subroutine writeRestart_fortran(handle_ncid,  start_gru, num_gru, checkpoint, ye
   USE summaFileManager,only:OUTPUT_PATH,OUTPUT_PREFIX         ! define output file
   USE summaFileManager,only:STATE_PATH                        ! optional path to state output files (defaults to OUTPUT_PATH)
   implicit none
-  
+
   ! dummy variables
   type(c_ptr),intent(in), value        :: handle_ncid       ! ncid of the output file
   integer(c_int),intent(in)            :: start_gru         ! index of GRU we are currently writing for
@@ -853,12 +853,6 @@ subroutine writeRestart(filename,         & ! intent(in): name of restart file
  ! size of prognostic variable vector
  nProgVars = size(prog_meta)
  allocate(ncVarID(nProgVars+1))     ! include 1 additional basin variable in ID array (possibly more later)
- 
- ! maximum number of soil layers
- maxSoil = gru_struc(1)%hruInfo(1)%nSoil
- 
- ! maximum number of snow layers
- maxSnow = gru_struc(1)%hruInfo(1)%nSnow
  
  ! create file
  err = nf90_create(trim(filename),nf90_classic_model,ncid)

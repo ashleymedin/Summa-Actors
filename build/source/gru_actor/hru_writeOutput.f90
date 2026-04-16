@@ -9,14 +9,12 @@ USE globalData,only:nSpecBand           ! maximum number of spectral bands
 USE globalData,only:allowRoutingOutput  ! flag to allow routing variable output
 
 USE data_types,only:&
-                    dlength,        & ! var%dat             (dp)
-                    ilength,        & ! var%dat             (i4b)
-                    var_i,          & ! x%var(:)            (i4b)
-                    var_i8,         & ! x%var(:)            (i8b)
-                    var_d,          & ! x%var(:)            (dp)
-                    var_ilength,    & ! x%var(:)%dat        (i4b)
-                    var_dlength,    & ! x%var(:)%dat        (dp)
-                    flagVec
+                    var_i,            & ! x%var(:)            (i4b)
+                    var_i8,           & ! x%var(:)            (i8b)
+                    var_d,            & ! x%var(:)            (dp)
+                    var_ilength,      & ! x%var(:)%dat        (i4b)
+                    var_dlength       & ! x%var(:)%dat        (dp)
+
 USE actor_data_types,only:hru_type
 ! named variables to define new output files
 USE netcdf
@@ -110,12 +108,11 @@ subroutine writeHRUOutput(indxGRU, indxHRU, timestep, outputStep, hru_data, err,
 
   err=0; message='summa_manageOutputFiles/'
   ! identify the start of the writing
-  ! Many variables get there values from summa4chm_util.f90:getCommandArguments()
-  call summa_setWriteAlarms(hru_data%oldTime_hru%var, hru_data%timeStruct%var, & 
-                            hru_data%finishTime_hru%var, newOutputFile,        &
-                            defNewOutputFile, ixRestart, printRestart,         &
-                            ixProgress, printProgress, hru_data%resetStats%dat,& 
-                            hru_data%finalizeStats%dat,                        &
+  ! Many variables get their values from summa4chm_util.f90:getCommandArguments()
+  call summa_setWriteAlarms(timestep, hru_data%oldTime_hru%var, hru_data%timeStruct%var,  & 
+                            hru_data%finishTime_hru%var, newOutputFile, defNewOutputFile, &
+                            ixRestart, printRestart, ixProgress, printProgress,           &
+                            hru_data%resetStats%dat, hru_data%finalizeStats%dat,          &
                             hru_data%statCounter%var, err, cmessage)
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
 
