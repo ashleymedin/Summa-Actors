@@ -190,13 +190,10 @@ subroutine runHRU_fortran(indx_gru, indx_hru, modelTimeStep, handle_hru_data, &
   hru_data%fluxStruct%var(iLookFLUX%mLayerColumnInflow)%dat(:) = 0._dp
   ! end if
 
-
   call runPhysics(indx_gru, indx_hru, modelTimeStep, hru_data, dt_init_factor, err, message)
   if(err /= 0) then; call f_c_string_ptr(trim(message), message_r); return; end if
 
   fracHRU = hru_data%attrStruct%var(iLookATTR%HRUarea) / hru_data%bvarStruct%var(iLookBVAR%basin__totalArea)%dat(1)
-
-
 
   ! ----- calculate weighted basin (GRU) fluxes --------------------------------------------------------------------------------------
   

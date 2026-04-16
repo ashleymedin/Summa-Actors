@@ -512,7 +512,6 @@ subroutine runGRU_fortran(indx_gru, modelTimeStep, handle_gru_data, &
     gru_data%hru(iHRU)%fluxStruct%var(iLookFLUX%mLayerColumnInflow)%dat(:) = 0._rkind
   end do
 
-
   do iHRU = 1, size(gru_data%hru)
     ! Give the HRU the up to date basin variables
     do iVar=1, size(gru_data%bvarStruct%var(:))
@@ -552,7 +551,6 @@ subroutine runGRU_fortran(indx_gru, modelTimeStep, handle_gru_data, &
           gru_data%bvarStruct%var(iLookBVAR%basin__ColumnOutflow)%dat(1) + &
           sum( gru_data%hru(iHRU)%fluxStruct%var(iLookFLUX%mLayerColumnOutflow)%dat(:))
     end if
-
 
     ! ----- calculate weighted basin (GRU) fluxes --------------------------------------------------------------------------------------
     

@@ -227,8 +227,8 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
   return; endif;
 
   ! update the number of layers
-  gru_struc(indxGRU)%hruInfo%nSnow   = hru_data%indxStruct%var(iLookINDEX%nSnow)%dat(1)     ! number of snow layers
-  gru_struc(indxGRU)%hruInfo%nSoil   = hru_data%indxStruct%var(iLookINDEX%nSoil)%dat(1)     ! number of soil layers
+  gru_struc(indxGRU)%hruInfo(indxHRU)%nSnow = hru_data%indxStruct%var(iLookINDEX%nSnow)%dat(1) ! number of snow layers
+  gru_struc(indxGRU)%hruInfo(indxHRU)%nSoil = hru_data%indxStruct%var(iLookINDEX%nSoil)%dat(1) ! number of soil layers
 
   !************************************* End of run_oneHRU *****************************************
   ! save the flag for computing the vegetation fluxes
