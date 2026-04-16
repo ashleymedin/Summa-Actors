@@ -64,11 +64,9 @@ USE var_lookup, only: maxvarStat ! number of statistics
 USE get_ixname_module,only:get_freqName       ! get name of frequency from frequency index
 USE output_buffer,only:summa_struct
 
-
 implicit none
 public::writeHRUOutput
 public::hru_writeRestart
-public::writeRestart
 public::setFinalizeStatsFalse
 private::writeParam
 private::writeData
@@ -82,17 +80,15 @@ contains
 subroutine writeHRUOutput(indxGRU, indxHRU, timestep, outputStep, hru_data, err, message)
   USE nr_type
   USE globalData,only:structInfo
-
   USE globalData,only:ixProgress                              ! define frequency to write progress
   USE globalData,only:ixRestart                               ! define frequency to write restart files
   USE globalData,only:gru_struc
-
   USE globalData,only:newOutputFile                           ! define option for new output files
   USE summa_alarms,only:summa_setWriteAlarms
-
   USE output_stats,only:calcStats                             ! module for compiling output statistics
   USE output_buffer,only:summa_struct
   implicit none
+
   ! Dummy variables
   integer(c_int),intent(in)             :: indxGRU            ! index of the GRU
   integer(c_int),intent(in)             :: indxHRU            ! index of hru in GRU
@@ -276,9 +272,8 @@ subroutine hru_writeRestart(&
   USE nr_type
   USE output_buffer,only:summa_struct
   USE var_lookup,only:iLookVarType           ! named variables for structure elements
-
-
   implicit none
+
   integer(c_int),intent(in)        :: indxHRU            ! index of hru in GRU
   integer(c_int),intent(in)        :: indxGRU            ! index of the GRU
   integer(c_int),intent(in)        :: timestep           ! model checkPoint
@@ -287,7 +282,6 @@ subroutine hru_writeRestart(&
   integer(c_int),intent(out)       :: err
   character(len=256)               :: message 
   character (len = 5)              :: output_fileSuffix
-
   integer(i4b)                     :: iStruct            ! index of model structure
   integer(i4b)                     :: iFreq              ! index of the output frequency
   integer(i4b)                     :: iVar 
@@ -407,6 +401,7 @@ subroutine writeData(indxGRU,indxHRU,iStep,maxLengthAll,structName,finalizeStats
   USE get_ixName_module,only:get_varTypeName         ! to access type strings for error messages
   USE get_ixName_module,only:get_statName            ! to access type strings for error messages
   implicit none
+
   ! declare dummy variables
   integer(i4b)  ,intent(in)        :: indxGRU
   integer(i4b)  ,intent(in)        :: indxHRU
@@ -589,7 +584,6 @@ subroutine setFinalizeStatsFalse(indx_gru) &
   USE output_buffer,only:summa_struct
   implicit none
   integer(c_int), intent(in)        :: indx_gru
-
   integer(i4b)                      :: iStep
 
   ! set finalizeStats to false

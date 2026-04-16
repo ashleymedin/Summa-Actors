@@ -6,9 +6,7 @@ module output_buffer_write
   ! top-level data types
   USE nr_type
   USE globalData,only:integerMissing, realMissing
-
   USE globalData,only:gru_struc  ! gru->hru mapping structure
-  
   USE output_buffer,only:summa_struct
   USE output_buffer,only:outputTimeStep
 
@@ -23,7 +21,8 @@ module output_buffer_write
                       gru_hru_intVec         ! x%gru(:)%hru(:)%var(:)%dat (i4b)
          
 
-  USE actor_data_types,only:time_i           ! var(:)%tim(:)              (i4b)
+  USE actor_data_types,only:time_i,             & ! var(:)%tim(:)                     (i4b)
+                            gru_hru_time_intVec   ! x%gru(:)%hru(:)%var(:)%tim(:)%dat (i4b)
 
   ! vector lengths
   USE var_lookup,only:maxvarFreq ! number of output frequencies
@@ -60,6 +59,7 @@ subroutine f_writeOutputDA(handle_ncid, output_step, start_gru, max_gru, &
   USE globalData,only:maxLayers
   USE C_interface_module,only:f_c_string_ptr
   implicit none
+
   ! dummy variables
   type(c_ptr),intent(in), value        :: handle_ncid       ! ncid of the output file
   integer(c_int),intent(in)            :: output_step       ! number of steps to write
@@ -265,6 +265,7 @@ subroutine writeTime(ncid,outputTimestep,output_step,meta,datt,err,message)
   integer(i4b)                  :: iVar              ! variable index
   integer(i4b)                  :: iFreq             ! frequency index
   integer(i4b)                  :: ncVarID           ! used only for time
+ 
   ! initialize error control
   err=0;message="writeTime/"
   ! loop through output frequencies
@@ -309,8 +310,8 @@ subroutine writeData(isBvar, ncid,outputTimestep,maxLengthAll,output_step,&
   USE globalData,only:outFreq                        ! output file information
   USE get_ixName_module,only:get_varTypeName         ! to access type strings for error messages
   USE get_ixName_module,only:get_statName            ! to access type strings for error messages
-
   implicit none
+
   ! declare dummy variables
   logical(lgt),intent(in)          :: isBvar            ! flag for bvar
   type(var_i)   ,intent(in)        :: ncid              ! file ids
@@ -340,6 +341,7 @@ subroutine writeData(isBvar, ncid,outputTimestep,maxLengthAll,output_step,&
   integer(i4b)                     :: iGRU
   real(rkind)                      :: val
   integer(i4b)                     :: nHRUrun
+
   ! initialize error control
   err=0
 
@@ -415,6 +417,7 @@ subroutine writeScalar(isBvar, ncid, outputTimestep, output_step, minGRU, maxGRU
   USE data_types,only:var_info                       ! metadata type
   USE, intrinsic :: ieee_arithmetic
   implicit none
+
   ! declare dummy variables
   logical(lgt)  ,intent(in)         :: isBvar              ! flag to indicate if we are writing bvar data, which has a different structure than the other data structures
   type(var_i)   ,intent(in)         :: ncid                ! fileid
@@ -439,26 +442,32 @@ subroutine writeScalar(isBvar, ncid, outputTimestep, output_step, minGRU, maxGRU
 
   err=0; message="writeScalar/"
 
-  ! initialize the data vectors
-  realVec = realMissing
-  nSpace = nHRUrun
-  if(isBvar) nSpace =  maxGRU - minGRU + 1 ! for bvar we have one value per GRU, not one value per HRU
+  select type(stat)
+    class is (gru_hru_time_doubleVec)
+      ! initialize the data vectors
+      realVec = realMissing
+      nSpace = nHRUrun
+      if(isBvar) nSpace =  maxGRU - minGRU + 1 ! for bvar we have one value per GRU, not one value per HRU
 
-  ! loop thru GRUs and HRUs
-  do iGRU = minGRU, maxGRU
-    do iHRU = 1, gru_struc(iGRU)%hruCount
-      hruCounter = hruCounter + 1  ! will be iGRU if bvar
-      if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(output_step)%dat(iFreq)) cycle
-      realVec(hruCounter, 1) = stat%gru(iGRU)%hru(iHRU)%var(map(iVar))%tim(output_step)%dat(iFreq)
-      if(isBvar .and. iHRU==1) exit ! only need to get the GRU-level data once
-    end do ! iHRU
-  end do ! iGRU   
+      ! loop thru GRUs and HRUs
+      do iGRU = minGRU, maxGRU
+        do iHRU = 1, gru_struc(iGRU)%hruCount
+          hruCounter = hruCounter + 1  ! will be iGRU if bvar
+          if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(output_step)%dat(iFreq)) cycle
+          realVec(hruCounter, 1) = stat%gru(iGRU)%hru(iHRU)%var(map(iVar))%tim(output_step)%dat(iFreq)
+          if(isBvar .and. iHRU==1) exit ! only need to get the GRU-level data once
+        end do ! iHRU
+      end do ! iGRU   
 
-  ! write the data vectors
-  err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq), &
-                          realVec(1:nSpace, 1),                        &
-                          start=(/minGRU,outputTimestep(iFreq)/),      & 
-                          count=(/nSpace,1/))
+      ! write the data vectors
+      err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq), &
+                              realVec(1:nSpace, 1),                        &
+                              start=(/minGRU,outputTimestep(iFreq)/),      & 
+                              count=(/nSpace,1/))
+
+    class default; err=20; message=trim(message)//'stats must be scalarv and of type gru_hru_time_doubleVec'; return
+  end select  ! stat type
+
 end subroutine writeScalar
 
 ! **********************************************************************************************************
@@ -487,7 +496,6 @@ subroutine writeVector(isBvar, ncid, outputTimestep, maxLengthAll, output_step, 
   type(gru_hru_time_intVec) ,intent(in) :: indx              ! index data
   integer(i4b)  ,intent(inout)          :: err
   character(*)  ,intent(inout)          :: message
-
   ! local variables
   integer(i4b)                          :: hruCounter=0
   integer(i4b)                          :: iGRU,iHRU

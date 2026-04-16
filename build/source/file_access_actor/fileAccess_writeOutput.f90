@@ -78,6 +78,7 @@ subroutine writeOutput_fortran(handle_ncid, num_steps, start_gru, max_gru, &
   USE globalData,only:attr_meta,bvar_meta,type_meta,time_meta,forc_meta,prog_meta,diag_meta,flux_meta,indx_meta,bpar_meta,mpar_meta
   USE C_interface_module,only:f_c_string_ptr
   implicit none
+
   ! dummy variables
   type(c_ptr),intent(in), value        :: handle_ncid       ! ncid of the output file
   integer(c_int),intent(in)            :: num_steps         ! number of steps to write
@@ -221,14 +222,13 @@ subroutine writeRestart_fortran(handle_ncid,  start_gru, num_gru, checkpoint, ye
   USE globalData,only:attr_meta,bvar_meta,type_meta,time_meta,forc_meta,prog_meta,diag_meta,flux_meta,indx_meta,bpar_meta,mpar_meta
   USE summaFileManager,only:OUTPUT_PATH,OUTPUT_PREFIX         ! define output file
   USE summaFileManager,only:STATE_PATH                        ! optional path to state output files (defaults to OUTPUT_PATH)
-
   implicit none
+  
   ! dummy variables
   type(c_ptr),intent(in), value        :: handle_ncid       ! ncid of the output file
   integer(c_int),intent(in)            :: start_gru         ! index of GRU we are currently writing for
   integer(c_int),intent(in)            :: num_gru           ! index of GRU we are currently writing for
-  
-  integer(c_int),intent(in)            :: checkpoint           ! slowest timestep of all grus in job
+  integer(c_int),intent(in)            :: checkpoint        ! slowest timestep of all grus in job
   integer(c_int),intent(in)            :: year 
   integer(c_int),intent(in)            :: month
   integer(c_int),intent(in)            :: day
@@ -244,13 +244,10 @@ subroutine writeRestart_fortran(handle_ncid,  start_gru, num_gru, checkpoint, ye
   integer(i4b), dimension(maxvarFreq)  :: stepCounter
   character(LEN=256)                   :: message
   character(LEN=256)                   :: cmessage
-  
-  character (len = 11) :: output_fileSuffix
-  character(len=256)                    :: restartFile       ! restart file name
-  character(len=256)                    :: timeString        ! portion of restart file name that contains the write-out time
-  integer(i4b)                          :: restart_flag
-
-
+  character (len = 11)                 :: output_fileSuffix
+  character(len=256)                   :: restartFile       ! restart file name
+  character(len=256)                   :: timeString        ! portion of restart file name that contains the write-out time
+  integer(i4b)                         :: restart_flag
   integer(i4b)                         :: iStruct
   integer(i4b)                         :: numGRU
   
@@ -352,8 +349,8 @@ subroutine writeData(isBvar, ncid,outputTimestep,outputTimestepUpdate,maxLengthA
   USE globalData,only:outFreq                        ! output file information
   USE get_ixName_module,only:get_varTypeName         ! to access type strings for error messages
   USE get_ixName_module,only:get_statName            ! to access type strings for error messages
-
   implicit none
+  
   ! declare dummy variables
   logical(lgt)  ,intent(in)        :: isBvar            ! flag to indicate if we are writing bvar data, which has a different structure than the other data structures
   type(var_i)   ,intent(in)        :: ncid              ! file ids
@@ -408,7 +405,6 @@ subroutine writeData(isBvar, ncid,outputTimestep,outputTimestepUpdate,maxLengthA
                            outputTimestepUpdate, nSteps, iFreq, iVar, meta, &
                            err, cmessage)
         if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-
         cycle
       end if  ! id time
 
@@ -450,6 +446,7 @@ subroutine writeForcTime(ncid, minGRU, maxGRU, outputTimestep, &
     outputTimestepUpdate, nSteps, iFreq, iVar, meta, err, message)
   USE data_types,only:var_info ! metadata type
   implicit none
+
   ! dummy variables
   type(var_i),   intent(in)        :: ncid
   integer(i4b),  intent(in)        :: minGRU
@@ -507,6 +504,7 @@ subroutine writeScalar(isBvar, ncid, outputTimestep, outputTimestepUpdate, nStep
   USE data_types,only:var_info                       ! metadata type
   USE, intrinsic :: ieee_arithmetic
   implicit none
+
   ! declare dummy variables
   logical(lgt)  ,intent(in)         :: isBvar                  ! flag to indicate if we are writing bvar data, which has a different structure than the other data structures
   type(var_i)   ,intent(in)         :: ncid                    ! fileid
@@ -536,54 +534,59 @@ subroutine writeScalar(isBvar, ncid, outputTimestep, outputTimestepUpdate, nStep
 
   err=0; message="writeScalar/"
 
-  ! initialize the data vectors
-  realVec = realMissing
-  nSpace = nHRUrun
-  if(isBvar) nSpace =  maxGRU - minGRU + 1 ! for bvar we have one value per GRU, not one value per HRU
+  select type(stat)
+    class is (gru_hru_time_doubleVec)
+      ! initialize the data vectors
+      realVec = realMissing
+      nSpace = nHRUrun
+      if(isBvar) nSpace =  maxGRU - minGRU + 1 ! for bvar we have one value per GRU, not one value per HRU
 
-  ! loop thru GRUs and HRUs and time
-  do iGRU = minGRU, maxGRU
-    do iHRU = 1, gru_struc(iGRU)%hruCount
-      hruCounter = hruCounter + 1  ! will be iGRU if bvar
-      stepCounter = 0
-      do iStep = 1, nSteps
-        if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(iStep)%dat(iFreq)) cycle
-        stepCounter = stepCounter + 1
-        val = stat%gru(iGRU)%hru(iHRU)%var(map(iVar))%tim(iStep)%dat(iFreq)
-        ! Handle missing values
-        if (ieee_is_nan(val)) then
-          val = realMissing
-        end if
-        ! Handle numeric conversion issues
-        if (val < -1.0e37 .or. val > 1.0e37) then
-          print *, "Warning: Value out of range for NetCDF variable: ", val
-          val = realMissing
-        end if
-        outputTimeStepUpdate(iFreq) = stepCounter
-        realVec(hruCounter, stepCounter) = val
-      end do ! iStep
-      ! We need to output the farthest time step achieved within the batch
-      if (stepCounter .gt. maxStepCounter) maxStepCounter = stepCounter
-      if(isBvar .and. iHRU==1) exit ! only need to get the GRU-level data once
-    end do ! iHRU
-  end do ! iGRU
+      ! loop thru GRUs and HRUs and time
+      do iGRU = minGRU, maxGRU
+        do iHRU = 1, gru_struc(iGRU)%hruCount
+          hruCounter = hruCounter + 1  ! will be iGRU if bvar
+          stepCounter = 0
+          do iStep = 1, nSteps
+            if(.not.summa_struct(1)%finalizeStats%gru(iGRU)%hru(iHRU)%tim(iStep)%dat(iFreq)) cycle
+            stepCounter = stepCounter + 1 
+            val = stat%gru(iGRU)%hru(iHRU)%var(map(iVar))%tim(iStep)%dat(iFreq)
+            ! Handle missing values
+            if (ieee_is_nan(val)) then
+              val = realMissing
+            end if
+            ! Handle numeric conversion issues
+            if (val < -1.0e37 .or. val > 1.0e37) then
+              print *, "Warning: Value out of range for NetCDF variable: ", val
+              val = realMissing
+            end if
+            outputTimeStepUpdate(iFreq) = stepCounter
+            realVec(hruCounter, stepCounter) = val
+          end do ! iStep
+          ! We need to output the farthest time step achieved within the batch
+          if (stepCounter .gt. maxStepCounter) maxStepCounter = stepCounter
+          if(isBvar .and. iHRU==1) exit ! only need to get the GRU-level data once
+        end do ! iHRU
+      end do ! iGRU
+      
+      ! write the data vectors
+      err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq),&
+                             realVec(1:nSpace, 1:stepCounter),    &
+                             start=(/minGRU,outputTimestep(iFreq)/),   & 
+                             count=(/nSpace,maxStepCounter/))
   
-  ! write the data vectors
-  err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq),&
-                         realVec(1:nSpace, 1:stepCounter),    &
-                         start=(/minGRU,outputTimestep(iFreq)/),   & 
-                         count=(/nSpace,maxStepCounter/))
-  
-  if(err/=0)then
-    print*, trim(nf90_strerror(err))
-    print *, "Variable: ", trim(meta(iVar)%varName)
-    print*,iFreq,meta(iVar)%ncVarID(iFreq),ncid%var(iFreq),minGRU
-    print*,outputTimestep(iFreq),stepCounter,nSteps
-    print*,size(gru_struc(iGRU)%hruInfo),nHRUrun,nSpace
-    ! Print size and mean of realVec
-    print *, "Size of realVec: ", size(realVec)
-    print *, "Mean of realVec: ", sum(realVec(1:nSpace, 1:stepCounter)) / (nSpace * stepCounter)
-  endif
+      if(err/=0)then
+        print*, trim(nf90_strerror(err))
+        print *, "Variable: ", trim(meta(iVar)%varName)
+        print*,iFreq,meta(iVar)%ncVarID(iFreq),ncid%var(iFreq),minGRU
+        print*,outputTimestep(iFreq),stepCounter,nSteps
+        print*,size(gru_struc(iGRU)%hruInfo),nHRUrun,nSpace
+        ! Print size and mean of realVec
+        print *, "Size of realVec: ", size(realVec)
+        print *, "Mean of realVec: ", sum(realVec(1:nSpace, 1:stepCounter)) / (nSpace * stepCounter)
+      endif
+      
+    class default; err=20; message=trim(message)//'stats must be scalarv and of type gru_hru_time_doubleVec'; return
+  end select  ! stat type
 
 end subroutine writeScalar
 
@@ -613,7 +616,6 @@ subroutine writeVector(isBvar, ncid, outputTimestep, maxLengthAll, nSteps, minGR
   type(gru_hru_time_intVec) ,intent(in) :: indx              ! index data
   integer(i4b)  ,intent(inout)          :: err
   character(*)  ,intent(inout)          :: message
-
   ! local variables
   integer(i4b)                          :: hruCounter=0
   integer(i4b)                          :: iStep             ! counter for looping over nSteps
@@ -673,12 +675,12 @@ subroutine writeVector(isBvar, ncid, outputTimestep, maxLengthAll, nSteps, minGR
         end select ! varType
 
         ! get the data vectors
-        select type (datt)
-          class is (gru_hru_time_doubleVec); realArray(hruCounter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(iStep)%dat(1:datLength)
-          class is (gru_hru_time_intVec);     intArray(hruCounter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(iStep)%dat(1:datLength)
-        end select
+          select type (datt)
+            class is (gru_hru_time_doubleVec); realArray(hruCounter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(iStep)%dat(1:datLength)
+            class is (gru_hru_time_intVec);     intArray(hruCounter,1:datLength) = datt%gru(iGRU)%hru(iHRU)%var(iVar)%tim(iStep)%dat(1:datLength)
+          end select
         if (isBvar .and. iHRU == 1)exit ! for bvar we have one value per GRU, not one value per HRU, so only get the data for the first HRU in each GRU
-
+ 
       end do  ! HRU loop
     end do  ! GRU loop        
 
