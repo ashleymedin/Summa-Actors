@@ -373,10 +373,8 @@ subroutine writeParam(indxGRU,indxHRU,struct,meta,structName,err,message)
        if (structName == "bpar") summa_struct(1)%bparStruct%gru(indxGRU)%var(iVar) = struct%var(iVar) ! this will overwrite data
       class is (var_dlength)
        if (structName == "mpar") summa_struct(1)%mparStruct%gru(indxGRU)%hru(indxHRU)%var(iVar) = struct%var(iVar)
-      class default; err=20; message=trim(message)//'unknown variable type (with HRU)'; return
- 
+      class default; err=20; message=trim(message)//'parameter type must be var_i, var_i8, var_d, or var_dlength'; return
     end select
-    call netcdf_err(err,message); if (err/=0) return
 
     ! re-initialize message
     message="writeParam/"
