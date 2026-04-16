@@ -381,7 +381,7 @@ subroutine writeScalar(isBvar, ncid, outputTimestep, output_step, minGRU, maxGRU
   integer(i4b)  ,intent(inout)      :: err
   character(*)  ,intent(inout)      :: message
   ! local variables
-  integer(i4b)                      :: hruCounter=0  
+  integer(i4b)                      :: hruCounter
   integer(i4b)                      :: iGRU,iHRU
   integer(i4b)                      :: nSpace              ! number of spatial points to write
   ! output array
@@ -394,6 +394,7 @@ subroutine writeScalar(isBvar, ncid, outputTimestep, output_step, minGRU, maxGRU
       ! initialize the data vectors
       realVec = realMissing
       nSpace = nHRUrun
+      hruCounter = 0
       if(isBvar) nSpace =  maxGRU - minGRU + 1 ! for bvar we have one value per GRU, not one value per HRU
 
       ! loop thru GRUs and HRUs
@@ -449,7 +450,7 @@ subroutine writeVector(isBvar, ncid, outputTimestep, maxLengthAll, output_step, 
   integer(i4b)  ,intent(inout)          :: err
   character(*)  ,intent(inout)          :: message
   ! local variables
-  integer(i4b)                          :: hruCounter=0
+  integer(i4b)                          :: hruCounter
   integer(i4b)                          :: iGRU,iHRU
   integer(i4b)                          :: nSoil
   integer(i4b)                          :: nSnow
@@ -477,6 +478,7 @@ subroutine writeVector(isBvar, ncid, outputTimestep, maxLengthAll, output_step, 
   end select
 
   ! loop thru GRUs and HRUs
+  hruCounter = 0
   do iGRU = minGRU, maxGRU
     do iHRU=1,gru_struc(iGRU)%hruCount
       hruCounter = hruCounter + 1  ! will be iGRU if bvar

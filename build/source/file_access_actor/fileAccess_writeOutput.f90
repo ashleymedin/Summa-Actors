@@ -522,10 +522,10 @@ subroutine writeScalar(isBvar, ncid, outputTimestep, outputTimestepUpdate, nStep
   integer(i4b)  ,intent(inout)      :: err
   character(*)  ,intent(inout)      :: message
   ! local variables
-  integer(i4b)                      :: hruCounter=0
-  integer(i4b)                      :: iStep=1                 ! counter for looping over nSteps
-  integer(i4b)                      :: stepCounter=0           ! counter for the realVec
-  integer(i4b)                      :: maxStepCounter=0        ! counter for the realVec
+  integer(i4b)                      :: hruCounter
+  integer(i4b)                      :: iStep                   ! counter for looping over nSteps
+  integer(i4b)                      :: stepCounter             ! counter for the realVec
+  integer(i4b)                      :: maxStepCounter          ! counter for the realVec
   integer(i4b)                      :: iGRU,iHRU
   integer(i4b)                      :: nSpace                  ! number of spatial points to write
   ! output array
@@ -539,6 +539,8 @@ subroutine writeScalar(isBvar, ncid, outputTimestep, outputTimestepUpdate, nStep
       ! initialize the data vectors
       realVec = realMissing
       nSpace = nHRUrun
+      hruCounter = 0
+      maxStepCounter = 0
       if(isBvar) nSpace =  maxGRU - minGRU + 1 ! for bvar we have one value per GRU, not one value per HRU
 
       ! loop thru GRUs and HRUs and time
@@ -622,7 +624,7 @@ subroutine writeVector(isBvar, ncid, outputTimestep, maxLengthAll, nSteps, minGR
   integer(i4b)  ,intent(inout)          :: err
   character(*)  ,intent(inout)          :: message
   ! local variables
-  integer(i4b)                          :: hruCounter=0
+  integer(i4b)                          :: hruCounter
   integer(i4b)                          :: iStep             ! counter for looping over nSteps
   integer(i4b)                          :: stepCounter       ! counter for the realVec
   integer(i4b)                          :: iGRU,iHRU
