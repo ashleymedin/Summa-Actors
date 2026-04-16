@@ -49,7 +49,7 @@ module fileAccess_writeOutput
   USE actor_data_types,only:time_i,                & ! var(:)%tim(:)                     (i4b)
                             gru_hru_time_intVec,   & ! x%gru(:)%hru(:)%var(:)%tim(:)%dat (i4b)
                             gru_hru_time_doubleVec   ! x%gru(:)%hru(:)%var(:)%tim(:)%dat (dp)
-                            
+
   ! vector lengths
   USE var_lookup, only: maxvarFreq ! number of output frequencies
   USE var_lookup, only: maxvarStat ! number of statistics
@@ -58,11 +58,11 @@ module fileAccess_writeOutput
   public::writeOutput_fortran
   public::writeRestart_fortran
   private::writeParam
-  private::writeTime
   private::writeData
   private::writeForcTime
   private::writeScalar
   private::writeVector
+  private::writeTime
   private::writeRestart
 
   contains
@@ -624,7 +624,7 @@ subroutine writeVector(isBvar, ncid, outputTimestep, maxLengthAll, nSteps, minGR
   integer(i4b)                          :: nSoil
   integer(i4b)                          :: nSnow
   integer(i4b)                          :: nLayers
-  real(rkind)                           :: nSpace             ! number of spatial points to write
+  integer(i4b)                          :: nSpace             ! number of spatial points to write
   ! output array
   integer(i4b)                          :: datLength         ! length of each data vector
   integer(i4b)                          :: maxLength         ! maximum length of each data vector
@@ -639,17 +639,17 @@ subroutine writeVector(isBvar, ncid, outputTimestep, maxLengthAll, nSteps, minGR
   nSpace = nHRUrun
   if(isBvar) nSpace = maxGRU - minGRU + 1 ! for bvar we have one value per GRU, not one value per HRU
 
+  ! initialize the data vectors
+  select type (datt)
+    class is (gru_hru_time_doubleVec); realArray(:,:) = realMissing;    dataType=ixReal
+    class is (gru_hru_time_intVec);     intArray(:,:) = integerMissing; dataType=ixInteger
+    class default; message=trim(message)//'data is not scalarv so should be either of type gru_hru_time_[double or int]Vec';err=20; return
+  end select
+
   ! loop time
   stepCounter = outputTimeStep(iFreq)
   do iStep = 1, nSteps
     hruCounter = 0
-    
-    ! initialize the data vectors
-    select type (datt)
-      class is (gru_hru_time_doubleVec); realArray(:,:) = realMissing;    dataType=ixReal
-      class is (gru_hru_time_intVec);     intArray(:,:) = integerMissing; dataType=ixInteger
-      class default; message=trim(message)//'data is not scalarv so should be either of type gru_hru_time_[double or int]Vec';err=20; return
-    end select
 
     ! loop thru GRUs and HRUs
     do iGRU = minGRU, maxGRU
@@ -699,8 +699,12 @@ subroutine writeVector(isBvar, ncid, outputTimestep, maxLengthAll, nSteps, minGR
 
    ! write the data vectors
     select case(dataType)
-      case(ixReal);    err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq),realArray(1:nSpace,1:maxLength),start=(/minGRU,1,stepCounter/),count=(/nSpace,maxLength,1/))
-      case(ixInteger); err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq),intArray(1:nSpace,1:maxLength),start=(/minGRU,1,stepCounter/),count=(/nSpace,maxLength,1/))
+      case(ixReal)
+        err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq),realArray(1:nSpace,1:maxLength),start=(/minGRU,1,stepCounter/),count=(/nSpace,maxLength,1/))
+        realArray(:,:) = realMissing ! reset the realArray
+      case(ixInteger)
+        err = nf90_put_var(ncid%var(iFreq),meta(iVar)%ncVarID(iFreq),intArray(1:nSpace,1:maxLength),start=(/minGRU,1,stepCounter/),count=(/nSpace,maxLength,1/))
+        intArray(:,:) = integerMissing ! reset the intArray
      end select ! data type
     if(err/=0)then; print*, "ERROR: with nf90_put_var in data vector"; return; endif
 

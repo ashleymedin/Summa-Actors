@@ -13,7 +13,7 @@ USE data_types,only:&
                     var_i8,           & ! x%var(:)            (i8b)
                     var_d,            & ! x%var(:)            (dp)
                     var_ilength,      & ! x%var(:)%dat        (i4b)
-                    var_dlength       & ! x%var(:)%dat        (dp)
+                    var_dlength         ! x%var(:)%dat        (dp)
 
 USE actor_data_types,only:hru_type
 ! named variables to define new output files
@@ -588,6 +588,5 @@ subroutine setFinalizeStatsFalse(indx_gru) &
     summa_struct(1)%finalizeStats%gru(indx_gru)%hru(1)%tim(iStep)%dat = .false.
   end do
 end subroutine setFinalizeStatsFalse
-
 
 end module HRUwriteoOutput_module

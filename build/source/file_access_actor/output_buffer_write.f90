@@ -16,7 +16,7 @@ module output_buffer_write
                       var_i8,        & ! x%var(:)                   integer(8)
                       var_d,         & ! x%var(:)                   (dp)
                       var_ilength,   & ! x%var(:)%dat               (i4b)
-                      var_dlength    & ! x%var(:)%dat               (dp)         
+                      var_dlength      ! x%var(:)%dat               (dp)         
 
   USE actor_data_types,only:time_i,                & ! var(:)%tim(:)                     (i4b)
                             gru_hru_time_intVec,   & ! x%gru(:)%hru(:)%var(:)%tim(:)%dat (i4b)
@@ -36,10 +36,10 @@ module output_buffer_write
   implicit none
   public::f_writeOutputDA
   private::writeParam
-  private::writeTime
   private::writeData
   private::writeScalar
   private::writeVector
+  private::writeTime
   
   contains
 
@@ -242,57 +242,6 @@ subroutine writeParam(ncid,iSpatial,struct,meta,err,message)
  end do  ! looping through local column model parameters
 
 end subroutine writeParam
-
-! **************************************************************************************
-! public subroutine writeTime: write current time to all files
-! **************************************************************************************
-subroutine writeTime(ncid,outputTimestep,output_step,meta,datt,err,message)
-  USE data_types,only:var_info                       ! metadata type
-  USE var_lookup,only:iLookStat                      ! index into stat structure
-  implicit none
-
-  ! declare dummy variables
-  type(var_i)   ,intent(in)     :: ncid              ! file ids
-  integer(i4b)  ,intent(inout)  :: outputTimestep(:) ! output time step
-  integer(i4b)  ,intent(in)     :: output_step
-  type(var_info),intent(in)     :: meta(:)           ! meta data
-  type(time_i)  ,intent(in)     :: datt(:)           ! timestep data
-  integer(i4b)  ,intent(out)    :: err               ! error code
-  character(*)  ,intent(out)    :: message           ! error message
-  ! local variables
-  integer(i4b)                  :: iVar              ! variable index
-  integer(i4b)                  :: iFreq             ! frequency index
-  integer(i4b)                  :: ncVarID           ! used only for time
- 
-  ! initialize error control
-  err=0;message="writeTime/"
-  ! loop through output frequencies
-  do iFreq=1,maxvarFreq
-
-    ! check that we have finalized statistics for a given frequency
-    if(.not.summa_struct(1)%finalizeStats%gru(1)%hru(1)%tim(output_step)%dat(iFreq)) cycle
-
-    ! loop through model variables
-    do iVar = 1,size(meta)
-
-      ! check instantaneous
-      if (meta(iVar)%statIndex(iFreq)/=iLookStat%inst) cycle
-      ! get variable id in file
-      err = nf90_inq_varid(ncid%var(iFreq),trim(meta(iVar)%varName),ncVarID)
-      if (err/=0) message=trim(message)//trim(meta(iVar)%varName)
-      call netcdf_err(err,message)
-      if (err/=0) then; err=20; return; end if
-
-      ! add to file
-      err = nf90_put_var(ncid%var(iFreq),ncVarID,(/datt(iVar)%tim(output_step)/),start=(/outputTimestep(iFreq)/),count=(/1/))
-      if (err/=0) message=trim(message)//trim(meta(iVar)%varName)
-      call netcdf_err(err,message)
-      if (err/=0) then; err=20; return; end if
-
-    end do ! iVar
-  end do ! iFreq
-
-end subroutine writeTime 
 
 ! **************************************************************************************
 ! public subroutine writeData: write model time-dependent data
@@ -500,7 +449,7 @@ subroutine writeVector(isBvar, ncid, outputTimestep, maxLengthAll, output_step, 
   integer(i4b)                          :: nSoil
   integer(i4b)                          :: nSnow
   integer(i4b)                          :: nLayers
-  real(rkind)                           :: nSpace            ! number of spatial points to write
+  integer(i4b)                          :: nSpace            ! number of spatial points to write
   ! output array
   integer(i4b)                          :: datLength         ! length of each data vector
   integer(i4b)                          :: maxLength         ! maximum length of each data vector
@@ -576,5 +525,56 @@ subroutine writeVector(isBvar, ncid, outputTimestep, maxLengthAll, output_step, 
   if(err/=0)then; print*, "ERROR: with nf90_put_var in data vector"; return; endif
   
 end subroutine writeVector
+
+! **************************************************************************************
+! public subroutine writeTime: write current time to all files
+! **************************************************************************************
+subroutine writeTime(ncid,outputTimestep,output_step,meta,datt,err,message)
+  USE data_types,only:var_info                       ! metadata type
+  USE var_lookup,only:iLookStat                      ! index into stat structure
+  implicit none
+
+  ! declare dummy variables
+  type(var_i)   ,intent(in)     :: ncid              ! file ids
+  integer(i4b)  ,intent(inout)  :: outputTimestep(:) ! output time step
+  integer(i4b)  ,intent(in)     :: output_step
+  type(var_info),intent(in)     :: meta(:)           ! meta data
+  type(time_i)  ,intent(in)     :: datt(:)           ! timestep data
+  integer(i4b)  ,intent(out)    :: err               ! error code
+  character(*)  ,intent(out)    :: message           ! error message
+  ! local variables
+  integer(i4b)                  :: iVar              ! variable index
+  integer(i4b)                  :: iFreq             ! frequency index
+  integer(i4b)                  :: ncVarID           ! used only for time
+ 
+  ! initialize error control
+  err=0;message="writeTime/"
+  ! loop through output frequencies
+  do iFreq=1,maxvarFreq
+
+    ! check that we have finalized statistics for a given frequency
+    if(.not.summa_struct(1)%finalizeStats%gru(1)%hru(1)%tim(output_step)%dat(iFreq)) cycle
+
+    ! loop through model variables
+    do iVar = 1,size(meta)
+
+      ! check instantaneous
+      if (meta(iVar)%statIndex(iFreq)/=iLookStat%inst) cycle
+      ! get variable id in file
+      err = nf90_inq_varid(ncid%var(iFreq),trim(meta(iVar)%varName),ncVarID)
+      if (err/=0) message=trim(message)//trim(meta(iVar)%varName)
+      call netcdf_err(err,message)
+      if (err/=0) then; err=20; return; end if
+
+      ! add to file
+      err = nf90_put_var(ncid%var(iFreq),ncVarID,(/datt(iVar)%tim(output_step)/),start=(/outputTimestep(iFreq)/),count=(/1/))
+      if (err/=0) message=trim(message)//trim(meta(iVar)%varName)
+      call netcdf_err(err,message)
+      if (err/=0) then; err=20; return; end if
+
+    end do ! iVar
+  end do ! iFreq
+
+end subroutine writeTime 
 
 end module output_buffer_write
