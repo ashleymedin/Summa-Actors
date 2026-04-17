@@ -80,8 +80,8 @@ const int OutputBuffer::writeOutputDA(const int output_step) {
   std::unique_ptr<char[]> message(new char[256]);
   int start_gru = partitions_[0]->getStartGru();
   int end_gru = partitions_[0]->getEndGru();
-    f_writeOutputDA(handle_ncid_.get(), output_step, start_gru, end_gru, 
-                    write_params_da_, err, &message);
+  f_writeOutputDA(handle_ncid_.get(), output_step, start_gru, end_gru, 
+                  write_params_da_, err, &message);
   if (err != 0) {
     std::cout << "Error: FileAccessActor -- f_writeOutputDA: " 
               << message.get() << "\n";
@@ -189,8 +189,8 @@ const std::optional<WriteOutputReturn*> OutputPartition::writeOutput(
     std::unique_ptr<char[]> message(new char[256]);
     bool write_params = isWriteParams();
     
-      writeOutput_fortran(handle_ncid, num_steps_buffer_, start_gru_, end_gru_, 
-                          write_params, err, &message);
+    writeOutput_fortran(handle_ncid, num_steps_buffer_, start_gru_, end_gru_, 
+                        write_params, err, &message);
     
     // recalculate the number of steps to send to grus
     steps_remaining_ -= num_steps_buffer_;
@@ -233,8 +233,8 @@ const std::optional<WriteOutputReturn*> OutputPartition::writeOutput(
     int err = 0;
     std::unique_ptr<char[]> message(new char[256]);
     bool write_params = isWriteParams();
-      writeOutput_fortran(handle_ncid, num_steps_buffer_, start_gru_, end_gru_, 
-                          write_params, err, &message);
+    writeOutput_fortran(handle_ncid, num_steps_buffer_, start_gru_, end_gru_, 
+                        write_params, err, &message);
     // recalculate the number of steps to send to grus
     steps_remaining_ -= num_steps_buffer_;
     if (steps_remaining_ < num_steps_buffer_) {
