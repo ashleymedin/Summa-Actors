@@ -92,7 +92,7 @@ subroutine writeHRUOutput(indxGRU, indxHRU, timestep, outputStep, hru_data, err,
   integer(c_int),intent(in)             :: indxHRU            ! index of hru in GRU
   integer(c_int),intent(in)             :: timestep           ! model timestep
   integer(c_int),intent(in)             :: outputStep         ! index into the output Struc
-  type(hru_type),intent(in),value       :: hru_data           ! local HRU data
+  type(hru_type),intent(inout)          :: hru_data           ! local HRU data
   integer(c_int),intent(out)            :: err
   character(len=256),intent(out)        :: message
   ! local variables
@@ -275,7 +275,7 @@ subroutine hru_writeRestart(&
   integer(c_int),intent(in)        :: indxGRU            ! index of the GRU
   integer(c_int),intent(in)        :: timestep           ! model checkPoint
   integer(c_int),intent(in)        :: outputStep         ! index into the output Struc
-  type(hru_type),intent(in),value  :: hru_data           ! local HRU data
+  type(hru_type),intent(in)        :: hru_data           ! local HRU data
   integer(c_int),intent(out)       :: err
   character(len=256)               :: message 
   character (len = 5)              :: output_fileSuffix
