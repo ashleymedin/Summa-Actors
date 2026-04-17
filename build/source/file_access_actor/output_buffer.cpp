@@ -1,8 +1,5 @@
 #include "output_buffer.hpp"
 #include "file_access_actor.hpp"
-#include "auxilary.hpp"
-
-#include <mutex>
 
 using chrono_time = std::chrono::time_point<std::chrono::high_resolution_clock>;
 
@@ -83,11 +80,8 @@ const int OutputBuffer::writeOutputDA(const int output_step) {
   std::unique_ptr<char[]> message(new char[256]);
   int start_gru = partitions_[0]->getStartGru();
   int end_gru = partitions_[0]->getEndGru();
-  {
-    std::lock_guard<std::mutex> lock(get_fortran_global_mutex());
     f_writeOutputDA(handle_ncid_.get(), output_step, start_gru, end_gru, 
                     write_params_da_, err, &message);
-  }
   if (err != 0) {
     std::cout << "Error: FileAccessActor -- f_writeOutputDA: " 
               << message.get() << "\n";
@@ -114,10 +108,7 @@ const std::optional<WriteOutputReturn*> OutputBuffer::writeOutput(
 int OutputBuffer::writeRestart(
   int start_gru, int num_gru, int checkpoint, int year, int month, int day, int hour) {
     int err = 0;
-    {
-      std::lock_guard<std::mutex> lock(get_fortran_global_mutex());
       writeRestart_fortran(handle_ncid_.get(), start_gru, num_gru, checkpoint, year, month, day, hour, err);
-    }
     return err;
   }
 
@@ -198,11 +189,8 @@ const std::optional<WriteOutputReturn*> OutputPartition::writeOutput(
     std::unique_ptr<char[]> message(new char[256]);
     bool write_params = isWriteParams();
     
-    {
-      std::lock_guard<std::mutex> lock(get_fortran_global_mutex());
       writeOutput_fortran(handle_ncid, num_steps_buffer_, start_gru_, end_gru_, 
                           write_params, err, &message);
-    }
     
     // recalculate the number of steps to send to grus
     steps_remaining_ -= num_steps_buffer_;
@@ -245,11 +233,8 @@ const std::optional<WriteOutputReturn*> OutputPartition::writeOutput(
     int err = 0;
     std::unique_ptr<char[]> message(new char[256]);
     bool write_params = isWriteParams();
-    {
-      std::lock_guard<std::mutex> lock(get_fortran_global_mutex());
       writeOutput_fortran(handle_ncid, num_steps_buffer_, start_gru_, end_gru_, 
                           write_params, err, &message);
-    }
     // recalculate the number of steps to send to grus
     steps_remaining_ -= num_steps_buffer_;
     if (steps_remaining_ < num_steps_buffer_) {

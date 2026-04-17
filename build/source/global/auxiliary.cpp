@@ -2,17 +2,8 @@
 #include <stdio.h>
 #include <vector>
 #include <string.h>
-#include <mutex>
 #include "fortran_data_types.hpp"
 #include "auxilary.hpp"
-
-namespace {
-std::mutex fortran_global_mutex;
-}
-
-std::mutex& get_fortran_global_mutex() {
-    return fortran_global_mutex;
-}
 
 /*****
  * These are all of the functions to get the Fortran data types into C

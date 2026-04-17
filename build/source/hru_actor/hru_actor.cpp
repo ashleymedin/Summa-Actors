@@ -1,7 +1,4 @@
 #include "hru_actor.hpp"
-#include "auxilary.hpp"
-
-#include <mutex>
 
 bool hru_extra_logging = false;
 
@@ -100,10 +97,7 @@ behavior hru_actor(stateful_actor<hru_state>* self, int ref_gru, int indx_gru,
       self->state.iFile = iFile;
       self->state.stepsInCurrentFFile = num_forcing_steps_in_iFile;
       std::unique_ptr<char[]> message(new char[256]);
-      {
-        std::lock_guard<std::mutex> lock(get_fortran_global_mutex());
         setTimeZoneOffset_fortran(iFile, self->state.hru_data, err, &message);
-      }
       if (err != 0) {
         aout(self) << "HRU_Actor: Error setTimeZoneOffset\n" 
                    << "\tindx_gru = " << self->state.indx_gru << "\n"
@@ -137,10 +131,7 @@ behavior hru_actor(stateful_actor<hru_state>* self, int ref_gru, int indx_gru,
       int err;
       self->state.iFile = iFile;
       std::unique_ptr<char[]> message(new char[256]);
-      {
-        std::lock_guard<std::mutex> lock(get_fortran_global_mutex());
         setTimeZoneOffset_fortran(iFile, self->state.hru_data, err, &message);
-      }
       if (err !=0) {
         aout(self) << "HRU_Actor: Error setTimeZoneOffset\n" 
                    << "\tindx_gru = " << self->state.indx_gru << "\n"
@@ -196,11 +187,8 @@ behavior hru_actor(stateful_actor<hru_state>* self, int ref_gru, int indx_gru,
 int initHRU(stateful_actor<hru_state>* self) {
   int err = 0;
   std::unique_ptr<char[]> message(new char[256]);
-  {
-    std::lock_guard<std::mutex> lock(get_fortran_global_mutex());
     initHRU_fortran(self->state.indx_gru, self->state.indx_hru, 
                     self->state.num_steps, self->state.hru_data, err, &message);
-  }
   if (err != 0) {
     aout(self) << "HRU_Actor: Error initHRU\n" 
                << "\tindx_gru = " << self->state.indx_gru << "\n"
@@ -212,11 +200,8 @@ int initHRU(stateful_actor<hru_state>* self) {
   }
   
   std::fill(message.get(), message.get() + 256, '\0'); // Clear message
-  {
-    std::lock_guard<std::mutex> lock(get_fortran_global_mutex());
     setupHRU_fortran(self->state.indx_gru, self->state.indx_hru, 
                      self->state.hru_data, err, &message);
-  }
   if (err != 0) {
     aout(self) << "HRU_Actor: Error setupHRU\n" 
                << "\tindx_gru = " << self->state.indx_gru << "\n"
@@ -228,11 +213,8 @@ int initHRU(stateful_actor<hru_state>* self) {
   }
 
   std::fill(message.get(), message.get() + 256, '\0'); // Clear message
-  {
-    std::lock_guard<std::mutex> lock(get_fortran_global_mutex());
     readHRURestart_fortran(self->state.indx_gru, self->state.indx_hru,
                            self->state.hru_data, err, &message);
-  }
   if (err != 0) {
     aout(self) << "HRU_Actor: Error readHRURestart\n" 
                << "\tindx_gru = " << self->state.indx_gru << "\n"
@@ -272,13 +254,10 @@ int initHRU(stateful_actor<hru_state>* self) {
 int runHRU(stateful_actor<hru_state>* self) {
   int err = 0;
   std::unique_ptr<char[]> message(new char[256]);
-  {
-    std::lock_guard<std::mutex> lock(get_fortran_global_mutex());
     readHRUForcing_fortran(self->state.indx_gru, self->state.indx_hru, 
                            self->state.timestep, self->state.forcingStep, 
                            self->state.iFile, self->state.hru_data, err,
                            &message);
-  }
   if (err != 0) {
     aout(self) << "HRU_Actor: Error readHRUForcing\n" 
                << "\tindx_gru = "     << self->state.indx_gru    << "\n"
@@ -300,12 +279,9 @@ int runHRU(stateful_actor<hru_state>* self) {
   }
 
   std::fill(message.get(), message.get() + 256, '\0'); // Clear message
-  {
-    std::lock_guard<std::mutex> lock(get_fortran_global_mutex());
     runHRU_fortran(self->state.indx_gru, self->state.indx_hru, self->state.timestep, 
                    self->state.hru_data, self->state.dt_init_factor, 
                    self->state.walltime_timestep, err, &message);
-  }
   if (err != 0) {
     aout(self) << "HRU_Actor: Error RunPhysics:\n"
                << "\tindx_gru = " << self->state.indx_gru << "\n"
@@ -321,13 +297,10 @@ int runHRU(stateful_actor<hru_state>* self) {
     // fortran side ald save it to the hru's state
     int y,m,d,h;
     std::fill(message.get(), message.get() + 256, '\0'); // Clear message
-    {
-      std::lock_guard<std::mutex> lock(get_fortran_global_mutex());
       writeHRUOutput_fortran(self->state.indx_gru, self->state.indx_hru,
                              self->state.timestep, 
                              self->state.output_structure_step_index,
                              self->state.hru_data, y, m, d, h, err, &message);
-    }
     if (err != 0) {
       aout(self) << "HRU_Actor: Error writeHRUToOutputStructure" 
                  << "\tindx_gru = " << self->state.indx_gru << "\n"
@@ -354,13 +327,10 @@ int runHRU(stateful_actor<hru_state>* self) {
     if (isCheckpoint(self)){
       self->state.checkpoint++;
 
-      {
-        std::lock_guard<std::mutex> lock(get_fortran_global_mutex());
         hru_writeRestart(&self->state.indx_hru, &self->state.indx_gru,
                          &self->state.output_structure_step_index,
                          &self->state.output_structure_step_index, //unused
                          self->state.hru_data, &err);
-      }
                 
       self->send(self->state.file_access_actor, write_restart_v,
                  self->state.ref_gru, self->state.timestep,

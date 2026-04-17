@@ -1,7 +1,4 @@
 #pragma once
-#include <mutex>
-#include <vector>
-
 // Setters
 void set_flagVec(std::vector<int>& arr_i, void* handle);
 void set_var_i(std::vector<int>& arr_i, void* handle);
@@ -69,6 +66,3 @@ void set_flagVec_by_indx(void* handle, std::vector<int>& summa_struct,
 void set_scalar_data(void* handle, double fracJulDay, 
                      double tmZoneOffsetFracDay, int year_length, 
                      int computeVegFlux, double dt_init, double upArea);
-
-// Shared lock for all Fortran entry points that touch global module state.
-std::mutex& get_fortran_global_mutex();
