@@ -85,6 +85,7 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
   ! global data
   USE globalData,only:gru_struc
   USE globalData,only:model_decisions          ! model decision structure
+  USE globalData,only:maxSnowLayers,maxSoilLayers,maxLayers
 
   implicit none
   ! Dummy Variables
@@ -98,6 +99,8 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
   ! local variables: general
   integer(8)                                :: hruId                  ! hruId
   character(LEN=256)                        :: cmessage               ! error message of downwind routine
+  integer(i4b)                              :: vegTypeIndex
+  integer(i4b)                              :: nSnowNow,nSoilNow,nLayersNow
   ! local variables: veg phenology
   logical(lgt)                              :: computeVegFluxFlag     ! flag to indicate if we are computing fluxes over vegetation (.false. means veg is buried with snow)
   real(dp)                                  :: notUsed_canopyDepth    ! NOT USED: canopy depth (m)
@@ -195,6 +198,44 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
         hru_data%tmZoneOffsetFracDay,         & ! time zone offset in fractional days
         err,cmessage)                  ! error control
   if(err/=0)then;err=20; message=trim(message)//cmessage; return; endif
+
+  ! validate key state before entering coupled_em/soilliqflux
+  if (indxGRU < 1 .or. indxGRU > size(gru_struc)) then
+    err = 20
+    write(message,'(A,I0,A,I0)') 'runPhysics/indxGRU out of bounds: ', indxGRU, ' valid max=', size(gru_struc)
+    return
+  end if
+  if (indxHRU < 1 .or. indxHRU > size(gru_struc(indxGRU)%hruInfo)) then
+    err = 20
+    write(message,'(A,I0,A,I0)') 'runPhysics/indxHRU out of bounds: ', indxHRU, ' valid max=', size(gru_struc(indxGRU)%hruInfo)
+    return
+  end if
+
+  vegTypeIndex = hru_data%typeStruct%var(iLookTYPE%vegTypeIndex)
+  nSnowNow = hru_data%indxStruct%var(iLookINDEX%nSnow)%dat(1)
+  nSoilNow = hru_data%indxStruct%var(iLookINDEX%nSoil)%dat(1)
+  nLayersNow = hru_data%indxStruct%var(iLookINDEX%nLayers)%dat(1)
+
+  if (vegTypeIndex < 1 .or. vegTypeIndex > size(HVT)) then
+    err = 20
+    write(message,'(A,I0,A,I0)') 'runPhysics/vegTypeIndex out of bounds: ', vegTypeIndex, ' valid max=', size(HVT)
+    return
+  end if
+  if (nSnowNow < 0 .or. nSnowNow > maxSnowLayers) then
+    err = 20
+    write(message,'(A,I0,A,I0)') 'runPhysics/nSnow out of bounds: ', nSnowNow, ' valid max=', maxSnowLayers
+    return
+  end if
+  if (nSoilNow < 1 .or. nSoilNow > maxSoilLayers) then
+    err = 20
+    write(message,'(A,I0,A,I0)') 'runPhysics/nSoil out of bounds: ', nSoilNow, ' valid max=', maxSoilLayers
+    return
+  end if
+  if (nLayersNow < 1 .or. nLayersNow > maxLayers) then
+    err = 20
+    write(message,'(A,I0,A,I0)') 'runPhysics/nLayers out of bounds: ', nLayersNow, ' valid max=', maxLayers
+    return
+  end if
 
   ! run the model for a single HRU
   call coupled_em(&
