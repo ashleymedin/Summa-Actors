@@ -199,6 +199,7 @@ contains
   do iHRU=1,gru_struc(iGRU)%hruCount
    maxSoilLayers = max(maxSoilLayers, gru_struc(iGRU)%hruInfo(iHRU)%nSoil)
    maxLayers = max(maxLayers, maxSnowLayers+gru_struc(iGRU)%hruInfo(iHRU)%nSoil)
+   print*, gru_struc(iGRU)%hruInfo(iHRU)%nSoil,gru_struc(iGRU)%hruInfo(iHRU)%nSnow, iGRU, iHRU, "in summa_setup.f90"
   end do
  end do
 
