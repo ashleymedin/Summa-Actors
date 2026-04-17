@@ -90,7 +90,7 @@ void serializeHru(stateful_actor<hru_state>* self, hru& serialized_state) {
 }
 
 void deserializeHru(stateful_actor<hru_state>* self, hru& new_state) {
-        setFinalizeStatsFalse(&self->state.indx_gru);
+  setFinalizeStatsFalse(&self->state.indx_gru);
 
   // Delete the old hru_data in Fortran
   delete_handle_hru_type(self->state.hru_data);
