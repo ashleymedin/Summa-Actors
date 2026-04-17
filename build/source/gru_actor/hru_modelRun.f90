@@ -58,8 +58,6 @@ USE noahmp_globals,only:RSMIN
 USE mDecisions_module,only:&               ! look-up values for LAI decisions
  monthlyTable,& ! LAI/SAI taken directly from a monthly table for different vegetation classes
  specified,&    ! LAI/SAI computed from green vegetation fraction and winterSAI and summerLAI parameters   
- moisture,&     ! moisture-based form of Richards' equation
- mixdform,&     ! mixed form of Richards' equation
  localColumn, & ! separate groundwater representation in each local soil column
  singleBasin, & ! single groundwater store over the entire basin
  bigBucket
@@ -99,7 +97,6 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
   character(len=256), intent(out)           :: message                ! error message
   ! local variables: general
   integer(8)                                :: hruId                  ! hruId
-  integer(i4b)                              :: richardsForm           ! Richards equation form decision
   character(LEN=256)                        :: cmessage               ! error message of downwind routine
   ! local variables: veg phenology
   logical(lgt)                              :: computeVegFluxFlag     ! flag to indicate if we are computing fluxes over vegetation (.false. means veg is buried with snow)
@@ -199,18 +196,6 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
         err,cmessage)                  ! error control
   if(err/=0)then;err=20; message=trim(message)//cmessage; return; endif
 
-  ! Fail early if model decision state is corrupted before entering coupled_em.
-  richardsForm = model_decisions(iLookDECISIONS%f_Richards)%iDecision
-  if (richardsForm /= moisture .and. richardsForm /= mixdform) then
-    err=20
-    write(cmessage,'(A,I0,A,I0,A,I0,A,I0)') ' invalid richards_form=', richardsForm, &
-      ' for GRU=', indxGRU, ' HRU=', indxHRU, ' timestep=', modelTimeStep
-    message=trim(message)//trim(cmessage)
-    print *,message
-    flush(6)
-    return
-  endif
- 
   ! run the model for a single HRU
   call coupled_em(&
                   ! model control
