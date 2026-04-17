@@ -108,7 +108,7 @@ const std::optional<WriteOutputReturn*> OutputBuffer::writeOutput(
 int OutputBuffer::writeRestart(
   int start_gru, int num_gru, int checkpoint, int year, int month, int day, int hour) {
     int err = 0;
-      writeRestart_fortran(handle_ncid_.get(), start_gru, num_gru, checkpoint, year, month, day, hour, err);
+    writeRestart_fortran(handle_ncid_.get(), start_gru, num_gru, checkpoint, year, month, day, hour, err);
     return err;
   }
 
