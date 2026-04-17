@@ -946,7 +946,7 @@ subroutine writeRestart(filename,         & ! intent(in): name of restart file
  
      ! actual number of layers
      nSnow = summa_struct(1)%indxStruct%gru(iGRU)%hru(iHRU)%var(iLookINDEX%nSnow)%tim(checkpoint)%dat(1)
-     nSoil = gru_struc(iHRU)%hruInfo(1)%nSoil
+     nSoil = gru_struc(iGRU)%hruInfo(iHRU)%nSoil
      nLayers = nSoil + nSnow
  
      ! write data
