@@ -1,7 +1,12 @@
 #include "gru_actor.hpp"
+#include <mutex>
 
 
 using namespace caf;
+
+namespace {
+std::mutex run_gru_fortran_mutex;
+}
 
 behavior GruActor::make_behavior() {  
   int err = 0;
@@ -113,8 +118,11 @@ behavior GruActor::async_mode() {
           return;
         }
         std::fill(message.get(), message.get() + 256, '\0'); // Clear message
-        runGRU_fortran(job_index_, timestep_, gru_data_.get(), dt_init_factor_, 
-                       err, &message);
+        {
+          std::lock_guard<std::mutex> lock(run_gru_fortran_mutex);
+          runGRU_fortran(job_index_, timestep_, gru_data_.get(), dt_init_factor_, 
+                         err, &message);
+        }
         if (err != 0) {
           handleErr(err, message);
           return;
@@ -190,8 +198,11 @@ behavior GruActor::data_assimilation_mode() {
       readGRUForcing_fortran(job_index_, time_step, forcing_step, iFile_, 
                              gru_data_.get(), err, &message);
       std::fill(message.get(), message.get() + 256, '\0'); // Clear message
-      runGRU_fortran(job_index_, time_step, gru_data_.get(), dt_init_factor_, 
-                     err, &message);
+      {
+        std::lock_guard<std::mutex> lock(run_gru_fortran_mutex);
+        runGRU_fortran(job_index_, time_step, gru_data_.get(), dt_init_factor_, 
+                       err, &message);
+      }
       if (err !=0 ) {
         self_->println("GRU Actor {}: Error running GRU -- {}", 
                        job_index_, message.get());

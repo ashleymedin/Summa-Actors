@@ -33,7 +33,8 @@ USE module_sf_noahmplsm,only:isWater       ! parameter for water land cover type
 ! named variables
 USE globalData,only:yes,no                 ! .true. and .false.
 USE globalData,only:overwriteRSMIN         ! flag to overwrite RSMIN
-USE globalData,only:maxSoilLayers          ! Maximum Number of Soil Layers
+USE globalData,only:maxSnowLayers          ! maximum number of snow layers
+USE globalData,only:maxSoilLayers          ! maximum number of soil layers
 ! urban vegetation category (could be local)
 USE globalData,only:urbanVegCategory       ! vegetation category for urban areas
 USE globalData,only:greenVegFrac_monthly   ! fraction of green vegetation in each month (0-1)
@@ -99,6 +100,8 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
   ! local variables: general
   integer(8)                                :: hruId                  ! hruId
   character(LEN=256)                        :: cmessage               ! error message of downwind routine
+  integer(i4b)                              :: nSnowNew               ! proposed updated snow layer count
+  integer(i4b)                              :: nSoilNew               ! proposed updated soil layer count
   ! local variables: veg phenology
   logical(lgt)                              :: computeVegFluxFlag     ! flag to indicate if we are computing fluxes over vegetation (.false. means veg is buried with snow)
   real(dp)                                  :: notUsed_canopyDepth    ! NOT USED: canopy depth (m)
@@ -147,7 +150,6 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
   ! ****************************************************************************
   ! *** model simulation
   ! ****************************************************************************
-  
   computeVegFluxFlag = (hru_data%ComputeVegFlux == yes)
 
   ! initialize the number of flux calls
@@ -226,9 +228,34 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
   flush(6)
   return; endif;
 
+  ! Validate indices and layer counts before updating shared layer metadata.
+  if (indxGRU < 1 .or. indxGRU > size(gru_struc)) then
+    err = 20
+    write(message,'(A,I0,A,I0)') 'runPhysics/indxGRU out of bounds: ', indxGRU, ' valid max=', size(gru_struc)
+    return
+  end if
+  if (indxHRU < 1 .or. indxHRU > size(gru_struc(indxGRU)%hruInfo)) then
+    err = 20
+    write(message,'(A,I0,A,I0)') 'runPhysics/indxHRU out of bounds: ', indxHRU, ' valid max=', size(gru_struc(indxGRU)%hruInfo)
+    return
+  end if
+
+  nSnowNew = hru_data%indxStruct%var(iLookINDEX%nSnow)%dat(1)
+  nSoilNew = hru_data%indxStruct%var(iLookINDEX%nSoil)%dat(1)
+  if (nSnowNew < 0 .or. nSnowNew > maxSnowLayers) then
+    err = 20
+    write(message,'(A,I0,A,I0)') 'runPhysics/nSnow out of bounds: ', nSnowNew, ' valid max=', maxSnowLayers
+    return
+  end if
+  if (nSoilNew < 1 .or. nSoilNew > maxSoilLayers) then
+    err = 20
+    write(message,'(A,I0,A,I0)') 'runPhysics/nSoil out of bounds: ', nSoilNew, ' valid max=', maxSoilLayers
+    return
+  end if
+
   ! update the number of layers
-  gru_struc(indxGRU)%hruInfo(indxHRU)%nSnow = hru_data%indxStruct%var(iLookINDEX%nSnow)%dat(1) ! number of snow layers
-  gru_struc(indxGRU)%hruInfo(indxHRU)%nSoil = hru_data%indxStruct%var(iLookINDEX%nSoil)%dat(1) ! number of soil layers
+  gru_struc(indxGRU)%hruInfo(indxHRU)%nSnow = nSnowNew
+  gru_struc(indxGRU)%hruInfo(indxHRU)%nSoil = nSoilNew
 
   !************************************* End of run_oneHRU *****************************************
   ! save the flag for computing the vegetation fluxes
