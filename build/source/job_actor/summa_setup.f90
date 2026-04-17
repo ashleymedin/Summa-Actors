@@ -201,6 +201,7 @@ contains
    maxLayers = max(maxLayers, maxSnowLayers+gru_struc(iGRU)%hruInfo(iHRU)%nSoil)
   end do
  end do
+ print*, 'maxSoilLayers = ', maxSoilLayers
 
  ! *****************************************************************************
  ! *** read local attributes for each HRU
