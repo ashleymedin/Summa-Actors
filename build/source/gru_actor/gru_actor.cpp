@@ -1,6 +1,9 @@
 #include "gru_actor.hpp"
+#include "auxilary.hpp"
 
 #include <mutex>
+
+std::mutex& get_fortran_global_mutex();
 
 
 using namespace caf;
