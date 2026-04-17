@@ -5,36 +5,43 @@
 #include "fortran_data_types.hpp"
 #include "auxilary.hpp"
 
+namespace {
+template <typename T>
+T* data_or_null(std::vector<T>& v) {
+    return v.empty() ? nullptr : v.data();
+}
+}
+
 /*****
  * These are all of the functions to get the Fortran data types into C
  * /
 /*************** SET DATA **************/  
 void set_flagVec(std::vector<int>& arr_i, void* handle) {
-    set_data_flagVec(handle, &arr_i[0], arr_i.size());
+    set_data_flagVec(handle, data_or_null(arr_i), arr_i.size());
 }
 
 void set_var_i(std::vector<int>& arr_i, void* handle) {
-    set_data_var_i(handle, &arr_i[0], arr_i.size());
+    set_data_var_i(handle, data_or_null(arr_i), arr_i.size());
 }
 
 void set_var_d(std::vector<double> &arr_d, void* handle) {
-    set_data_var_d(handle, &arr_d[0], arr_d.size());
+    set_data_var_d(handle, data_or_null(arr_d), arr_d.size());
 }
 
 void set_var_i8(std::vector<long int>& arr_i, void* handle) {
-    set_data_var_i8(handle, &arr_i[0], arr_i.size());
+    set_data_var_i8(handle, data_or_null(arr_i), arr_i.size());
 }
 
 void set_i8length(std::vector<long int> &arr_i8length, void* handle) {
-    set_data_i8length(handle, &arr_i8length[0], arr_i8length.size());
+    set_data_i8length(handle, data_or_null(arr_i8length), arr_i8length.size());
 }
 
 void set_ilength(std::vector<int> &arr_ilength, void* handle) {
-    set_data_ilength(handle, &arr_ilength[0], arr_ilength.size());
+    set_data_ilength(handle, data_or_null(arr_ilength), arr_ilength.size());
 }
 
 void set_dlength(std::vector<double> &arr_dlength, void* handle) {
-    set_data_dlength(handle, &arr_dlength[0], arr_dlength.size());
+    set_data_dlength(handle, data_or_null(arr_dlength), arr_dlength.size());
 }
 
 void set_var_flagVec(std::vector<std::vector<int> > &mat, void* handle) {
@@ -51,7 +58,7 @@ void set_var_flagVec(std::vector<std::vector<int> > &mat, void* handle) {
         num_elements += num_col[i];
     }
     
-    set_data_var_flagVec(handle, &array[0], num_row, &num_col[0], num_elements);
+    set_data_var_flagVec(handle, data_or_null(array), num_row, data_or_null(num_col), num_elements);
 }
 
 void set_var_ilength(std::vector<std::vector<int> > &mat, void* handle) {
@@ -68,7 +75,7 @@ void set_var_ilength(std::vector<std::vector<int> > &mat, void* handle) {
         num_elements += num_col[i];
     }
     
-    set_data_var_ilength(handle, &array[0], num_row, &num_col[0], num_elements);
+    set_data_var_ilength(handle, data_or_null(array), num_row, data_or_null(num_col), num_elements);
 }
 
 void set_var_i8length(std::vector<std::vector<long int> > &mat, void* handle) {
@@ -85,7 +92,7 @@ void set_var_i8length(std::vector<std::vector<long int> > &mat, void* handle) {
         num_elements += num_col[i];
     }
     
-    set_data_var_i8length(handle, &array[0], num_row, &num_col[0], num_elements);
+    set_data_var_i8length(handle, data_or_null(array), num_row, data_or_null(num_col), num_elements);
 }
 
 void set_var_dlength(std::vector<std::vector<double> > &mat, void *handle) {
@@ -102,7 +109,7 @@ void set_var_dlength(std::vector<std::vector<double> > &mat, void *handle) {
         num_elements += num_col[i];
     }
     
-    set_data_var_dlength(handle, &array[0], num_row, &num_col[0], num_elements);
+    set_data_var_dlength(handle, data_or_null(array), num_row, data_or_null(num_col), num_elements);
 }
 
 
@@ -114,7 +121,7 @@ std::vector<int> get_flagVec(void* handle) {
     if (size == 0) return std::vector<int>();
 
     std::vector<int> array(size);
-    get_data_flagVec(handle, &array[0]);
+    get_data_flagVec(handle, data_or_null(array));
     return array;
 }
 
@@ -124,7 +131,7 @@ std::vector<int> get_var_i(void* handle) {
     if (size == 0) return std::vector<int>();
 
     std::vector<int> array(size);
-    get_data_var_i(handle, &array[0]);
+    get_data_var_i(handle, data_or_null(array));
     return array;
 }
 
@@ -134,7 +141,7 @@ std::vector<int> get_type_struct(void* handle) {
     if (size == 0) return std::vector<int>();
 
     std::vector<int> array(size);
-    get_data_typeStruct(handle, &array[0]);
+    get_data_typeStruct(handle, data_or_null(array));
     return array;
 }
 
@@ -145,7 +152,7 @@ std::vector<double> get_var_d(void* handle) {
     if (size == 0) return std::vector<double>();
 
     std::vector<double> array(size);
-    get_data_var_d(handle, &array[0]);
+    get_data_var_d(handle, data_or_null(array));
     return array;
 }
 
@@ -155,7 +162,7 @@ std::vector<double> get_attr_struct(void* handle) {
     if (size == 0) return std::vector<double>();
 
     std::vector<double> array(size);
-    get_data_attrStruct(handle, &array[0]);
+    get_data_attrStruct(handle, data_or_null(array));
     return array;
 }
 
@@ -165,7 +172,7 @@ std::vector<double> get_bpar_struct(void* handle) {
     if (size == 0) return std::vector<double>();
 
     std::vector<double> array(size);
-    get_data_bparStruct(handle, &array[0]);
+    get_data_bparStruct(handle, data_or_null(array));
     return array;
 }
 
@@ -175,7 +182,7 @@ std::vector<long int> get_var_i8(void* handle) {
     if (size == 0) return std::vector<long int>();
 
     std::vector<long int> array(size);
-    get_data_var_i8(handle, &array[0]);
+    get_data_var_i8(handle, data_or_null(array));
     return array;
 }
 
@@ -185,7 +192,7 @@ std::vector<long int> get_i8length(void* handle) {
     if (size == 0) return std::vector<long int>();
 
     std::vector<long int> array(size);
-    get_data_i8length(handle, &array[0]);
+    get_data_i8length(handle, data_or_null(array));
     return array;
 }
 
@@ -195,7 +202,7 @@ std::vector<int> get_ilength(void* handle) {
     if (size == 0) return std::vector<int>();
 
     std::vector<int> array(size);
-    get_data_ilength(handle, &array[0]);
+    get_data_ilength(handle, data_or_null(array));
     return array;
 }
 
@@ -205,7 +212,7 @@ std::vector<double> get_dlength(void* handle) {
     if (size == 0) return std::vector<double>();
 
     std::vector<double> array(size);
-    get_data_dlength(handle, &array[0]);
+    get_data_dlength(handle, data_or_null(array));
     return array;
 }
 
@@ -217,7 +224,7 @@ std::vector<std::vector<int> > get_var_flagVec(void* handle) {
     if (num_row == 0) return std::vector<std::vector<int> >();
 
     std::vector<int> num_col(num_row);
-    get_size_data_var_flagVec(handle, &num_row, &num_col[0]);
+    get_size_data_var_flagVec(handle, &num_row, data_or_null(num_col));
 
     int num_elem = 0;
     for(int i=0; i<num_row; i++)
@@ -225,7 +232,7 @@ std::vector<std::vector<int> > get_var_flagVec(void* handle) {
 
     std::vector<int> array(num_elem);
 
-    get_data_var_flagVec(handle, &array[0]);
+    get_data_var_flagVec(handle, data_or_null(array));
 
     std::vector<std::vector<int> > mat(num_row);
     for(size_t i=0; i<num_row; i++)
@@ -248,7 +255,7 @@ std::vector<std::vector<int> > get_var_ilength(void* handle) {
     if (num_row == 0) return std::vector<std::vector<int> >();
 
     std::vector<int> num_col(num_row);
-    get_size_data_var_ilength(handle, &num_row, &num_col[0]);
+    get_size_data_var_ilength(handle, &num_row, data_or_null(num_col));
 
     int num_elem = 0;
     for(int i=0; i<num_row; i++)
@@ -256,7 +263,7 @@ std::vector<std::vector<int> > get_var_ilength(void* handle) {
 
     std::vector<int> array(num_elem);
 
-    get_data_var_ilength(handle, &array[0]);
+    get_data_var_ilength(handle, data_or_null(array));
 
     std::vector<std::vector<int> > mat(num_row);
     for(size_t i=0; i<num_row; i++)
@@ -277,7 +284,7 @@ std::vector<std::vector<long int> > get_var_i8length(void* handle) {
     if (num_row == 0) return std::vector<std::vector<long int> >();
 
     std::vector<int> num_col(num_row);
-    get_size_data_var_i8length(handle, &num_row, &num_col[0]);
+    get_size_data_var_i8length(handle, &num_row, data_or_null(num_col));
 
     int num_elem = 0;
     for(int i=0; i<num_row; i++)
@@ -285,7 +292,7 @@ std::vector<std::vector<long int> > get_var_i8length(void* handle) {
 
     std::vector<long int> array(num_elem);
 
-    get_data_var_i8length(handle, &array[0]);
+    get_data_var_i8length(handle, data_or_null(array));
 
     std::vector<std::vector<long int> > mat(num_row);
     for(size_t i=0; i<num_row; i++)
@@ -306,7 +313,7 @@ std::vector<std::vector<double> > get_var_dlength(void* handle) {
     if (num_row == 0) return std::vector<std::vector<double> >();
 
     std::vector<int> num_col(num_row);
-    get_size_data_var_dlength(handle, &num_row, &num_col[0]);
+    get_size_data_var_dlength(handle, &num_row, data_or_null(num_col));
 
     int num_elem = 0;
     for(int i=0; i<num_row; i++)
@@ -314,7 +321,7 @@ std::vector<std::vector<double> > get_var_dlength(void* handle) {
 
     std::vector<double> array(num_elem);
 
-    get_data_var_dlength(handle, &array[0]);
+    get_data_var_dlength(handle, data_or_null(array));
 
     std::vector<std::vector<double> > mat(num_row);
     for(size_t i=0; i<num_row; i++)
@@ -336,7 +343,7 @@ std::vector<std::vector<double>> get_mpar_struct_array(void* handle) {
     if (num_row == 0) return std::vector<std::vector<double> >();
 
     std::vector<int> num_col(num_row);
-    get_size_data_mparStruct(handle, &num_row, &num_col[0]);
+    get_size_data_mparStruct(handle, &num_row, data_or_null(num_col));
 
     int num_elem = 0;
     for(int i=0; i<num_row; i++)
@@ -344,7 +351,7 @@ std::vector<std::vector<double>> get_mpar_struct_array(void* handle) {
 
     std::vector<double> array(num_elem);
 
-    get_data_mparStruct(handle, &array[0]);
+    get_data_mparStruct(handle, data_or_null(array));
 
     std::vector<std::vector<double> > mat(num_row);
     for(size_t i=0; i<num_row; i++)
@@ -381,14 +388,14 @@ std::vector<std::vector<double>> get_var_dlength_by_indx(void* handle,
   if (size_var == 0) return std::vector<std::vector<double>>();
 
   std::vector<int> var(size_var);
-  get_size_data_var_dlength_by_indx(handle, &struct_indx, &size_var, &var[0]);
+    get_size_data_var_dlength_by_indx(handle, &struct_indx, &size_var, data_or_null(var));
 
   int num_elem = 0;
   for(int i=0; i<size_var; i++)
     num_elem += var[i];
 
   std::vector<double> dat(num_elem);
-  get_data_var_dlength_by_indx(handle, &struct_indx, &dat[0]);
+    get_data_var_dlength_by_indx(handle, &struct_indx, data_or_null(dat));
 
   std::vector<std::vector<double>> hru_struct(size_var);
   for(size_t i=0; i<size_var; i++)
@@ -414,14 +421,14 @@ std::vector<std::vector<int>> get_var_ilength_by_indx(void* handle,
   if (size_var == 0) return std::vector<std::vector<int>>();
 
   std::vector<int> var(size_var);
-  get_size_data_var_ilength_by_indx(handle, &struct_indx, &size_var, &var[0]);
+    get_size_data_var_ilength_by_indx(handle, &struct_indx, &size_var, data_or_null(var));
 
   int num_elem = 0;
   for(int i=0; i<size_var; i++)
     num_elem += var[i];
 
   std::vector<int> dat(num_elem);
-  get_data_var_ilength_by_indx(handle, &struct_indx, &dat[0]);
+    get_data_var_ilength_by_indx(handle, &struct_indx, data_or_null(dat));
 
   std::vector<std::vector<int>> hru_struct(size_var);
   for(size_t i=0; i<size_var; i++)
@@ -453,7 +460,7 @@ std::vector<int> get_var_i_by_indx(void* handle, int struct_indx) {
   if (size_var == 0) return std::vector<int>();
 
   std::vector<int> array(size_var);
-  get_data_var_i_by_indx(handle, &struct_indx, &array[0]);
+    get_data_var_i_by_indx(handle, &struct_indx, data_or_null(array));
   return array;
 }
 
@@ -468,7 +475,7 @@ std::vector<double> get_var_d_by_indx(void* handle, int struct_indx) {
   if (size_var == 0) return std::vector<double>();
 
   std::vector<double> array(size_var);
-  get_data_var_d_by_indx(handle, &struct_indx, &array[0]);
+    get_data_var_d_by_indx(handle, &struct_indx, data_or_null(array));
   return array;
 }
 
@@ -480,7 +487,7 @@ std::vector<long int> get_var_i8_by_indx(void* handle, int struct_indx) {
   if (size_var == 0) return std::vector<long int>();
 
   std::vector<long int> array(size_var);
-  get_data_var_i8_by_indx(handle, &struct_indx, &array[0]);
+    get_data_var_i8_by_indx(handle, &struct_indx, data_or_null(array));
   return array;
 }
 
@@ -493,7 +500,7 @@ std::vector<int> get_flagVec_by_indx(void* handle, int struct_indx) {
   if (size == 0) return std::vector<int>();
 
   std::vector<int> array(size);
-  get_data_flagVec_by_indx(handle, &struct_indx, &array[0]);
+    get_data_flagVec_by_indx(handle, &struct_indx, data_or_null(array));
   return array;
 }
 
@@ -512,8 +519,8 @@ std::vector<std::vector<std::vector<double>>> get_lookup_struct(void *handle) {
       int size_data;
       get_size_data_lookup(handle, &z, &var, &size_data);
       std::vector<double> lookup(size_data);
-      get_data_zlookup(handle, &z, &var, &lookup[0]);
-      lookup_var[var] = lookup;
+    get_data_zlookup(handle, &z, &var, data_or_null(lookup));
+    lookup_var[var - 1] = lookup;
     }
   }
 
@@ -563,8 +570,8 @@ void set_var_dlength_by_indx(void* handle,
     num_elem += var[i];
   }
 
-  set_data_var_dlength_by_indx(handle, &struct_indx, &num_var, &var[0],
-      &num_elem, &dat_array[0]);
+  set_data_var_dlength_by_indx(handle, &struct_indx, &num_var, data_or_null(var),
+      &num_elem, data_or_null(dat_array));
 }
 
 // struct_indx maps to the following:
@@ -584,8 +591,8 @@ void set_var_ilength_by_indx(void* handle,
     num_elem += var[i];
   }
 
-  set_data_var_ilength_by_indx(handle, &struct_indx, &num_var, &var[0],
-      &num_elem, &dat_array[0]);
+  set_data_var_ilength_by_indx(handle, &struct_indx, &num_var, data_or_null(var),
+      &num_elem, data_or_null(dat_array));
   
 }
 
@@ -594,7 +601,7 @@ void set_var_ilength_by_indx(void* handle,
 void set_var_i8_by_indx(void* handle, std::vector<long int>& summa_struct, 
     int struct_indx) {
   int num_var = summa_struct.size();
-  set_data_var_i8_by_indx(handle, &struct_indx, &num_var, &summa_struct[0]);
+    set_data_var_i8_by_indx(handle, &struct_indx, &num_var, data_or_null(summa_struct));
 }
 
 // struct_indx maps to the following:
@@ -609,7 +616,7 @@ void set_var_i8_by_indx(void* handle, std::vector<long int>& summa_struct,
 void set_var_i_by_indx(void* handle, std::vector<int>& summa_struct, 
     int struct_indx) {
   int num_var = summa_struct.size();
-  set_data_var_i_by_indx(handle, &struct_indx, &num_var, &summa_struct[0]);
+    set_data_var_i_by_indx(handle, &struct_indx, &num_var, data_or_null(summa_struct));
 }
 
 // Struct_indx maps to the following:
@@ -620,7 +627,7 @@ void set_var_i_by_indx(void* handle, std::vector<int>& summa_struct,
 void set_var_d_by_indx(void* handle, std::vector<double>& summa_struct, 
     int struct_indx) {
   int num_var = summa_struct.size();
-  set_data_var_d_by_indx(handle, &struct_indx, &num_var, &summa_struct[0]);
+    set_data_var_d_by_indx(handle, &struct_indx, &num_var, data_or_null(summa_struct));
 }
 
 // struct_indx maps to the following:
@@ -629,5 +636,5 @@ void set_var_d_by_indx(void* handle, std::vector<double>& summa_struct,
 void set_flagVec_by_indx(void* handle, std::vector<int>& summa_struct, 
     int struct_indx) {
   int num_var = summa_struct.size();
-  set_data_flagVec_by_indx(handle, &struct_indx, &num_var, &summa_struct[0]);
+    set_data_flagVec_by_indx(handle, &struct_indx, &num_var, data_or_null(summa_struct));
 }
