@@ -1,5 +1,7 @@
 #include "gru_actor.hpp"
 
+#include <mutex>
+
 
 using namespace caf;
 
@@ -113,15 +115,21 @@ behavior GruActor::async_mode() {
           return;
         }
         std::fill(message.get(), message.get() + 256, '\0'); // Clear message
+        {
+          std::lock_guard<std::mutex> lock(get_fortran_global_mutex());
           runGRU_fortran(job_index_, timestep_, gru_data_.get(), dt_init_factor_, 
                          err, &message);
+        }
         if (err != 0) {
           handleErr(err, message);
           return;
         }
         std::fill(message.get(), message.get() + 256, '\0'); // Clear message
-        writeGRUOutput_fortran(job_index_, timestep_, output_step_,
-                               gru_data_.get(), err, &message,y, m, d, h);
+        {
+          std::lock_guard<std::mutex> lock(get_fortran_global_mutex());
+          writeGRUOutput_fortran(job_index_, timestep_, output_step_,
+                                 gru_data_.get(), err, &message,y, m, d, h);
+        }
         if (err != 0) {
           handleErr(err, message);
           return;
@@ -190,15 +198,21 @@ behavior GruActor::data_assimilation_mode() {
       readGRUForcing_fortran(job_index_, time_step, forcing_step, iFile_, 
                              gru_data_.get(), err, &message);
       std::fill(message.get(), message.get() + 256, '\0'); // Clear message
+      {
+        std::lock_guard<std::mutex> lock(get_fortran_global_mutex());
         runGRU_fortran(job_index_, time_step, gru_data_.get(), dt_init_factor_, 
                        err, &message);
+      }
       if (err !=0 ) {
         self_->println("GRU Actor {}: Error running GRU -- {}", 
                        job_index_, message.get());
       }
       std::fill(message.get(), message.get() + 256, '\0'); // Clear message
-      writeGRUOutput_fortran(job_index_, time_step, output_step, 
-                             gru_data_.get(), err, &message, current_time.y, current_time.m, current_time.d, current_time.h);
+      {
+        std::lock_guard<std::mutex> lock(get_fortran_global_mutex());
+        writeGRUOutput_fortran(job_index_, time_step, output_step, 
+                               gru_data_.get(), err, &message, current_time.y, current_time.m, current_time.d, current_time.h);
+      }
                              if (start_time.y == -1 && start_time.m == -1 && start_time.d == -1 && start_time.h == -1) {
                               start_time.y = current_time.y;
                               start_time.m = current_time.m;

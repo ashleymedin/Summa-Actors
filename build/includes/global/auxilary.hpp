@@ -1,4 +1,5 @@
 #pragma once
+#include <mutex>
 // Setters
 void set_flagVec(std::vector<int>& arr_i, void* handle);
 void set_var_i(std::vector<int>& arr_i, void* handle);
@@ -66,3 +67,6 @@ void set_flagVec_by_indx(void* handle, std::vector<int>& summa_struct,
 void set_scalar_data(void* handle, double fracJulDay, 
                      double tmZoneOffsetFracDay, int year_length, 
                      int computeVegFlux, double dt_init, double upArea);
+
+// Shared mutex used to serialize access to Fortran module globals (e.g., gru_struc/summa_struct).
+std::mutex& get_fortran_global_mutex();
