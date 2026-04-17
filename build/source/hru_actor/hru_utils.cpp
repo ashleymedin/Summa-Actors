@@ -1,4 +1,7 @@
 #include "hru_actor.hpp"
+#include "auxilary.hpp"
+
+#include <mutex>
 
 using namespace caf;
 
@@ -90,7 +93,10 @@ void serializeHru(stateful_actor<hru_state>* self, hru& serialized_state) {
 }
 
 void deserializeHru(stateful_actor<hru_state>* self, hru& new_state) {
-  setFinalizeStatsFalse(&self->state.indx_gru);
+    {
+        std::lock_guard<std::mutex> lock(get_fortran_global_mutex());
+        setFinalizeStatsFalse(&self->state.indx_gru);
+    }
 
   // Delete the old hru_data in Fortran
   delete_handle_hru_type(self->state.hru_data);
