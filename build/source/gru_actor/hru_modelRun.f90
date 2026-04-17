@@ -195,6 +195,8 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
         hru_data%tmZoneOffsetFracDay,         & ! time zone offset in fractional days
         err,cmessage)                  ! error control
   if(err/=0)then;err=20; message=trim(message)//cmessage; return; endif
+  print*, gru_struc(indxGRU)%hruInfo(indxHRU)%nSnow, hru_data%indxStruct%var(iLookINDEX%nSnow)%dat(1), &
+          gru_struc(indxGRU)%hruInfo(indxHRU)%nSoil, hru_data%indxStruct%var(iLookINDEX%nSoil)%dat(1)," before updating the number of layers"
 
   ! run the model for a single HRU
   call coupled_em(&
@@ -223,8 +225,7 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
   print *,message
   flush(6)
   return; endif;
-  print*, gru_struc(indxGRU)%hruInfo(indxHRU)%nSnow, hru_data%indxStruct%var(iLookINDEX%nSnow)%dat(1), &
-          gru_struc(indxGRU)%hruInfo(indxHRU)%nSoil, hru_data%indxStruct%var(iLookINDEX%nSoil)%dat(1)," before updating the number of layers"
+
   ! update the number of layers
   gru_struc(indxGRU)%hruInfo(indxHRU)%nSnow = hru_data%indxStruct%var(iLookINDEX%nSnow)%dat(1) ! number of snow layers
   gru_struc(indxGRU)%hruInfo(indxHRU)%nSoil = hru_data%indxStruct%var(iLookINDEX%nSoil)%dat(1) ! number of soil layers
