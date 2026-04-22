@@ -109,10 +109,10 @@ subroutine writeHRUOutput(indxGRU, indxHRU, timestep, outputStep, hru_data, err,
   err=0; message='summa_manageOutputFiles/'
   ! identify the start of the writing
   ! Many variables get their values from summa4chm_util.f90:getCommandArguments()
-  call summa_setWriteAlarms(timestep, hru_data%oldTime_hru%var, hru_data%timeStruct%var,  & 
-                            hru_data%finishTime_hru%var, newOutputFile, defNewOutputFile, &
-                            ixRestart, printRestart, ixProgress, printProgress,           &
-                            hru_data%resetStats%dat, hru_data%finalizeStats%dat,          &
+  call summa_setWriteAlarms(timestep,.false., hru_data%oldTime_hru%var, hru_data%timeStruct%var,  & 
+                            hru_data%finishTime_hru%var, newOutputFile, defNewOutputFile,         &
+                            ixRestart, printRestart, ixProgress, printProgress,                   &
+                            hru_data%resetStats%dat, hru_data%finalizeStats%dat,                  &
                             hru_data%statCounter%var, err, cmessage)
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
 
