@@ -122,8 +122,7 @@ contains
  integer(i4b)                          :: iGRU,iHRU          ! looping variables
  integer(i4b)                          :: iVar               ! looping variables
  real(rkind)                           :: absEnergyFac       ! multiplier for absolute value of energy state variable (for enthalpy or temperature)
- logical                               :: needLookup_soil    ! logical to decide if computing soil enthalpy lookup tables
- ! ---------------------------------------------------------------------------------------
+  ! ---------------------------------------------------------------------------------------
  ! associate to elements in the data structure
  summaVars: associate(&
 
@@ -175,12 +174,6 @@ contains
  ! NOTE: Must be after ffile_info because mDecisions uses the data_step
  call mDecisions(err,cmessage)
  if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-
- ! decide if computing soil enthalpy lookup tables and vegetation enthalpy lookup tables
- needLookup_soil = .false.
- ! if need enthalpy for either energy backward Euler residual or IDA state variable and not using soil enthalpy hypergeometric function
- if(model_decisions(iLookDECISIONS%nrgConserv)%iDecision == enthalpyForm) needLookup_soil = .true. 
- ! if using IDA and enthalpy as a state variable, need temperature-enthalpy lookup tables for soil and vegetation
  
  ! get the maximum number of snow layers
  select case(model_decisions(iLookDECISIONS%snowLayers)%iDecision)
