@@ -142,7 +142,6 @@ subroutine runPhysics(indxGRU, indxHRU, modelTimeStep, hru_data, &
       
   end if  ! if the first time step
  
-
   ! ****************************************************************************
   ! *** model simulation
   ! ****************************************************************************

@@ -429,6 +429,7 @@ subroutine readGRUForcing_fortran(indx_gru, iStep, iRead, iFile, &
   USE actor_data_types,only:gru_type
   USE C_interface_module,only:f_c_string_ptr  ! convert fortran string to c string
   USE hru_read,only:readHRUForcing
+  USE, intrinsic :: ieee_arithmetic
   implicit none
   ! Dummy Variables
   integer(c_int), intent(in)       :: indx_gru
@@ -630,6 +631,10 @@ subroutine runGRU_fortran(indx_gru, modelTimeStep, handle_gru_data, &
       gru_data%hru(iHRU)%bvarStruct%var(iVar)%dat(:) = gru_data%bvarStruct%var(iVar)%dat(:)
     end do
   end do
+
+  ! Underflow occurs benignly and overflow occurs rarely in the physics; we do not want to stop the model when they occur
+  call ieee_set_flag(ieee_underflow, .false.)
+  call ieee_set_flag(ieee_overflow, .false.)
 
 end subroutine runGRU_fortran
 

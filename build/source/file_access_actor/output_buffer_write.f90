@@ -362,7 +362,6 @@ end subroutine writeData
 subroutine writeScalar(isBvar, ncid, outputTimestep, output_step, minGRU, maxGRU, &
   nHRUrun, iFreq, iVar, meta, stat, map, err, message)
   USE data_types,only:var_info                       ! metadata type
-  USE, intrinsic :: ieee_arithmetic
   implicit none
 
   ! declare dummy variables
