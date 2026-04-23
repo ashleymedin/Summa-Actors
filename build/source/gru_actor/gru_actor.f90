@@ -429,7 +429,6 @@ subroutine readGRUForcing_fortran(indx_gru, iStep, iRead, iFile, &
   USE actor_data_types,only:gru_type
   USE C_interface_module,only:f_c_string_ptr  ! convert fortran string to c string
   USE hru_read,only:readHRUForcing
-  USE, intrinsic :: ieee_arithmetic
   implicit none
   ! Dummy Variables
   integer(c_int), intent(in)       :: indx_gru
@@ -459,6 +458,7 @@ subroutine runGRU_fortran(indx_gru, modelTimeStep, handle_gru_data, &
     dt_init_factor, err, message_r) bind(C, name="runGRU_fortran")
   USE actor_data_types,only:gru_type
   USE C_interface_module,only:f_c_string_ptr  ! convert fortran string to c string
+  USE, intrinsic :: ieee_arithmetic
   USE summa_modelRun,only:runPhysics
   
   USE globalData,only:model_decisions          ! model decision structure
