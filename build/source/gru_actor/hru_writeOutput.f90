@@ -20,10 +20,6 @@ USE actor_data_types,only:hru_type
 USE netcdf
 USE netcdf_util_module,only:netcdf_err 
 USE nr_type
-USE globalData,only:noNewFiles
-USE globalData,only:newFileEveryOct1
-USE globalData,only:chunkSize                 ! size of chunks to write
-USE globalData,only:outputPrecision           ! data structure for output precision
 USE globalData,only:integerMissing            ! missing integer
 ! metadata
 USE globalData,only:time_meta                 ! metadata on the model time
