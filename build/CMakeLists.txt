@@ -149,6 +149,7 @@ endif()
 set(VERSIONFILE     ${DRIVER_DIR}/summaversion.inc)
 execute_process(
     COMMAND bash -c "git tag | tail -n 1"
+    WORKING_DIRECTORY ${F_MASTER}/build/summa
     OUTPUT_VARIABLE VERSION
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
@@ -159,11 +160,13 @@ execute_process(
 )
 execute_process(
     COMMAND bash -c "git describe --long --all --always | sed 's#heads/##'"
+    WORKING_DIRECTORY ${F_MASTER}/build/summa
     OUTPUT_VARIABLE GITBRCH
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 execute_process(
     COMMAND git rev-parse HEAD
+    WORKING_DIRECTORY ${F_MASTER}/build/summa
     OUTPUT_VARIABLE GITHASH
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
@@ -193,6 +196,7 @@ set_target_properties(summa PROPERTIES
     Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/mod_files"
 )
 target_compile_options(summa PRIVATE ${FLAGS_ALL})
+target_include_directories(summa PRIVATE ${DRIVER_DIR})
 target_link_libraries(summa PUBLIC ${EXT_TARGETS} SUMMA_NOAHMP SUMMA_COMM)
 
 
@@ -206,6 +210,5 @@ target_include_directories(${EXEC_NAME} PUBLIC
                            ${F_MASTER}/build/includes/summa_actor 
                            ${F_MASTER}/build/includes/job_actor 
                            ${F_MASTER}/build/includes/file_access_actor 
-                           ${F_MASTER}/build/includes/gru_actor
-                           ${DRIVER_DIR})
+                           ${F_MASTER}/build/includes/gru_actor)
 target_link_libraries( ${EXEC_NAME} ${EXT_TARGETS} summa)
