@@ -15,11 +15,8 @@ module output_buffer
   public::f_allocateOutputBuffer
   public::f_deallocateOutputBuffer
 
-  ! Parameters for the output NetCDF file
-  character(len=64), parameter     :: summaVersion = ''
-  character(len=64), parameter     :: buildTime = ''
-  character(len=64), parameter     :: gitBranch = ''
-  character(len=64), parameter     :: gitHash = ''
+  ! version information generated during compiling
+  INCLUDE 'summaversion.inc'
 
   type(summa_output_type),allocatable,save,public     :: summa_struct(:)    ! summa_OutputStructure(1)%struc%var(:)%dat(nTimeSteps) 
   type(ilength),allocatable,save,public               :: outputTimeStep(:)  ! timestep in output files
@@ -86,7 +83,7 @@ subroutine f_defOutput(handle_ncid, start_gru, num_gru, num_hru, file_gru, &
 
   nGRUrun = num_gru
   nHRUrun = num_hru
-  fileout = trim(OUTPUT_PATH)//trim(OUTPUT_PREFIX)//trim("_")//trim(output_fileSuffix)
+  fileout = trim(OUTPUT_PATH)//trim(OUTPUT_PREFIX)//trim(output_fileSuffix)
   ncid(:) = integerMissing
   ! never use SUMMA buffered write for Actors, so pass first argument as false
   call def_output(.false., summaVersion, buildTime, gitBranch, gitHash, &

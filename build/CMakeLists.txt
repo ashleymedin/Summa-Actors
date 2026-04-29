@@ -145,9 +145,38 @@ if (USE_SUNDIALS)
     set(SUMMA_ALL ${SUMMA_ALL} ${MODRUN_SUNDIALS} ${SOLVER_SUNDIALS})
 endif()
 
+# Define version number
+set(VERSIONFILE     ${DRIVER_DIR}/summaversion.inc)
+execute_process(
+    COMMAND bash -c "git tag | tail -n 1"
+    OUTPUT_VARIABLE VERSION
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+execute_process(
+    COMMAND date
+    OUTPUT_VARIABLE BUILDTIM
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+execute_process(
+    COMMAND bash -c "git describe --long --all --always | sed 's#heads/##'"
+    OUTPUT_VARIABLE GITBRCH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+execute_process(
+    COMMAND git rev-parse HEAD
+    OUTPUT_VARIABLE GITHASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
 #=========================================================================================
 # COMPILE PART 4: Do the compilation
 #=========================================================================================
+
+# update version information
+file(WRITE  ${VERSIONFILE} "character(len=64), parameter     :: summaVersion = '${VERSION}'\n")
+file(APPEND ${VERSIONFILE} "character(len=64), parameter     :: buildTime = '${BUILDTIM}'\n")
+file(APPEND ${VERSIONFILE} "character(len=64), parameter     :: gitBranch = '${GITBRCH}'\n")
+file(APPEND ${VERSIONFILE} "character(len=64), parameter     :: gitHash = '${GITHASH}'")
 
 # Build SUMMA_NOAHMP Object
 add_library(SUMMA_NOAHMP OBJECT ${NOAHMP} ${NRUTIL})
@@ -177,5 +206,6 @@ target_include_directories(${EXEC_NAME} PUBLIC
                            ${F_MASTER}/build/includes/summa_actor 
                            ${F_MASTER}/build/includes/job_actor 
                            ${F_MASTER}/build/includes/file_access_actor 
-                           ${F_MASTER}/build/includes/gru_actor)
+                           ${F_MASTER}/build/includes/gru_actor
+                           ${DRIVER_DIR})
 target_link_libraries( ${EXEC_NAME} ${EXT_TARGETS} summa)

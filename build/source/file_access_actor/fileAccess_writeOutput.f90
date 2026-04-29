@@ -979,6 +979,9 @@ subroutine writeRestart(filename,         & ! intent(in): name of restart file
 
  end do  ! iGRU loop
 
+ ! write HRU dimension and ID for file
+ call write_hru_info(ncid, gruDimID, hruDimID, err, cmessage); if(err/=0) then; message=trim(message)//trim(cmessage); return; end if
+
  ! close file
  call nc_file_close(ncid,err,cmessage)
  if(err/=0)then;message=trim(message)//trim(cmessage);return;end if
