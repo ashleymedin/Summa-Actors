@@ -10,7 +10,7 @@
 
 // -- detect supported platforms -----------------------------------------------
 
-#if defined(CAF_MACOS) || defined(CAF_LINUX) || defined(CAF_NET_BSD)
+#if defined(CAF_LINUX) || defined(CAF_NET_BSD) // CAF_MACOS excluded: GNU g++ cannot parse Apple mach headers
 #  define CAF_HAS_PROCESS_METRICS
 #endif
 
@@ -80,7 +80,7 @@ void update_impl(Ts&&...) {
 
 // -- macOS-specific scraping logic --------------------------------------------
 
-#ifdef CAF_MACOS
+#if 0 // CAF_MACOS excluded for GNU g++
 
 #  include <libproc.h>
 #  include <mach/mach.h>
